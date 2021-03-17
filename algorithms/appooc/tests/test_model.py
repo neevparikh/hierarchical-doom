@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import torch
 
-from algorithms.appo.model import create_actor_critic
+from algorithms.appooc.model import create_actor_critic
 from algorithms.appo_common.model_utils import get_hidden_size
 from algorithms.utils.arguments import default_cfg
 from envs.create_env import create_env
@@ -16,7 +16,7 @@ class TestModel(TestCase):
     @staticmethod
     def forward_pass(device_type):
         env_name = 'atari_breakout'
-        cfg = default_cfg(algo='APPO', env=env_name)
+        cfg = default_cfg(algo='appooc', env=env_name)
         cfg.actor_critic_share_weights = True
         cfg.hidden_size = 128
         cfg.use_rnn = True

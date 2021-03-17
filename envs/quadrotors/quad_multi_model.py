@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from algorithms.appo.model_utils import nonlinearity, EncoderBase, \
+from algorithms.appo_common.model_utils import nonlinearity, EncoderBase, \
     register_custom_encoder, ENCODER_REGISTRY, fc_layer
 from algorithms.utils.pytorch_utils import calc_num_elements
 

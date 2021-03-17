@@ -2,7 +2,7 @@ import torch
 
 from torch import nn
 
-from algorithms.appo.model_utils import ENCODER_REGISTRY, create_standard_encoder, EncoderBase, register_custom_encoder
+from algorithms.appo_common.model_utils import ENCODER_REGISTRY, create_standard_encoder, EncoderBase, register_custom_encoder
 from envs.dmlab.dmlab30 import DMLAB_VOCABULARY_SIZE, DMLAB_INSTRUCTIONS
 from utils.utils import log
 

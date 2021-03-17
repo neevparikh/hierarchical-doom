@@ -15,6 +15,9 @@ def get_algo_class(algo):
     if algo == 'APPO':
         from algorithms.appo.appo import APPO
         algo_class = APPO
+    elif algo == 'APPOOC':
+        from algorithms.appooc.appooc import APPOOC
+        algo_class = APPOOC
     elif algo == 'DUMMY_SAMPLER':
         from algorithms.dummy_sampler.sampler import DummySampler
         algo_class = DummySampler

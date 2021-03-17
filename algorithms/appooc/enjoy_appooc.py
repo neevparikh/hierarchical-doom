@@ -9,9 +9,9 @@ from os.path import join
 import numpy as np
 import torch
 
-from algorithms.appo.actor_worker import transform_dict_observations
-from algorithms.appo.learner import LearnerWorker
-from algorithms.appo.model import create_actor_critic
+from algorithms.appooc.actor_worker import transform_dict_observations
+from algorithms.appooc.learner import LearnerWorker
+from algorithms.appooc.model import create_actor_critic
 from algorithms.appo_common.model_utils import get_hidden_size
 from algorithms.utils.action_distributions import ContinuousActionDistribution
 from algorithms.utils.algo_utils import ExperimentStatus

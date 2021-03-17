@@ -346,7 +346,7 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
 def create_actor_critic(cfg, obs_space, action_space, timing=None):
     if timing is None:
         timing = Timing()
-
+                
     def make_encoder():
         return create_encoder(cfg, obs_space, timing)
 

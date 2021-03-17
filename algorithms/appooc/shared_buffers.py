@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from gym import spaces
 
-from algorithms.appo.appo_utils import copy_dict_structure, iter_dicts_recursively, iterate_recursively
+from algorithms.appooc.appooc_utils import copy_dict_structure, iter_dicts_recursively, iterate_recursively
 from algorithms.appo_common.model_utils import get_hidden_size
 from algorithms.utils.action_distributions import calc_num_logits, calc_num_actions
 from utils.utils import log

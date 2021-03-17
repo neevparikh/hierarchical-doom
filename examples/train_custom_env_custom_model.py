@@ -13,7 +13,7 @@ import gym
 import numpy as np
 from torch import nn
 
-from algorithms.appo.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
+from algorithms.appo_common.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
 from algorithms.utils.arguments import arg_parser, parse_args
 from algorithms.utils.pytorch_utils import calc_num_elements
 from envs.env_registry import global_env_registry
