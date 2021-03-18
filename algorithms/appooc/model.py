@@ -409,7 +409,10 @@ def create_actor_critic(cfg, obs_space, action_space, timing=None):
     def make_core(encoder):
         return create_core(cfg, encoder.get_encoder_out_size())
 
-    if cfg.actor_critic_share_weights:
-        return _ActorCriticSharedWeights(make_encoder, make_core, action_space, cfg, timing)
+    if cfg.algo == 'APPOOC':
+        return _OptionCriticSharedWeights(make_encoder, make_core, action_space, cfg, timing)
     else:
-        return _ActorCriticSeparateWeights(make_encoder, make_core, action_space, cfg, timing)
+        if cfg.actor_critic_share_weights:
+            return _ActorCriticSharedWeights(make_encoder, make_core, action_space, cfg, timing)
+        else:
+            return _ActorCriticSeparateWeights(make_encoder, make_core, action_space, cfg, timing)
