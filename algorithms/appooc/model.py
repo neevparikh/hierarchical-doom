@@ -343,6 +343,62 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
         return result
 
 
+class _OptionCriticSharedWeights(_ActorCriticBase):
+    def __init__(self, make_encoder, make_core, action_space, cfg, timing):
+        super().__init__(action_space, cfg, timing)
+
+        # in case of shared weights we're using only a single encoder and a single core
+        self.encoder = make_encoder()
+        self.encoders = [self.encoder]
+
+        self.core = make_core(self.encoder)
+        self.cores = [self.core]
+
+        core_out_size = self.core.get_core_out_size()
+
+        # TODO add `tails` to predict value, termination and action?
+        self.critic_linear = nn.Linear(core_out_size, 1)
+        self.action_parameterization = self.get_action_parameterization(core_out_size)
+
+        self.apply(self.initialize_weights)
+        self.train()  # eval() for inference?
+
+    def forward_head(self, obs_dict):
+        normalize_obs(obs_dict, self.cfg)
+        x = self.encoder(obs_dict)
+        return x
+
+    def forward_core(self, head_output, rnn_states):
+        x, new_rnn_states = self.core(head_output, rnn_states)
+        return x, new_rnn_states
+
+    def forward_tail(self, core_output, with_action_distribution=False):
+        values = self.critic_linear(core_output)
+
+        action_distribution_params, action_distribution = self.action_parameterization(core_output)
+
+        # for non-trivial action spaces it is faster to do these together
+        actions, log_prob_actions = sample_actions_log_probs(action_distribution)
+
+        result = AttrDict(dict(
+            actions=actions,
+            action_logits=action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
+            log_prob_actions=log_prob_actions,
+            values=values,
+        ))
+
+        if with_action_distribution:
+            result.action_distribution = action_distribution
+
+        return result
+
+    def forward(self, obs_dict, rnn_states, with_action_distribution=False):
+        x = self.forward_head(obs_dict)
+        x, new_rnn_states = self.forward_core(x, rnn_states)
+        result = self.forward_tail(x, with_action_distribution=with_action_distribution)
+        result.rnn_states = new_rnn_states
+        return result
+
 def create_actor_critic(cfg, obs_space, action_space, timing=None):
     if timing is None:
         timing = Timing()
