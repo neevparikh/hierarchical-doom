@@ -343,6 +343,7 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
         return result
 
 
+
 class _OptionCriticSharedWeights(_ActorCriticBase):
     def __init__(self, make_encoder, make_core, action_space, cfg, timing):
         super().__init__(action_space, cfg, timing)
@@ -398,6 +399,7 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         result = self.forward_tail(x, with_action_distribution=with_action_distribution)
         result.rnn_states = new_rnn_states
         return result
+
 
 def create_actor_critic(cfg, obs_space, action_space, timing=None):
     if timing is None:
