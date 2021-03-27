@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from algorithms.appo_common.model_utils import create_encoder, create_core, ActionParameterizationContinuousNonAdaptiveStddev, \
-    ActionParameterizationDefault, normalize_obs
+    ActionParameterizationDefault, ActionParameterizationOption, normalize_obs
 from algorithms.utils.action_distributions import sample_actions_log_probs, is_continuous_action_space, calc_num_actions, calc_num_logits
 from utils.timing import Timing
 from utils.utils import AttrDict
@@ -151,7 +151,9 @@ class _ActorCriticBase(nn.Module):
         self.cores = []
 
     def get_action_parameterization(self, core_output_size):
-        if not self.cfg.adaptive_stddev and is_continuous_action_space(self.action_space):
+        if self.cfg.algo == 'APPOOC':
+            action_parameterization = ActionParameterizationOption(self.cfg, core_output_size, self.action_space,)
+        elif not self.cfg.adaptive_stddev and is_continuous_action_space(self.action_space):
             action_parameterization = ActionParameterizationContinuousNonAdaptiveStddev(
                 self.cfg, core_output_size, self.action_space,
             )
@@ -358,11 +360,16 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         core_out_size = self.core.get_core_out_size()
 
         # TODO add `tails` to predict value, termination and action?
-        self.critic_linear = nn.Linear(core_out_size, 1)
+        self.critic_linear = nn.Linear(core_out_size, cfg.num_options)
         self.action_parameterization = self.get_action_parameterization(core_out_size)
+        self.termination = nn.Sequential(nn.Linear(core_out_size, cfg.num_options), nn.Sigmoid())
 
         self.apply(self.initialize_weights)
         self.train()  # eval() for inference?
+
+        self.current_option = 0
+        self.num_options = cfg.num_options
+        self.options_epsilon = torch.tensor([cfg.options_epsilon])
 
     def forward_head(self, obs_dict):
         normalize_obs(obs_dict, self.cfg)
@@ -371,12 +378,30 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
 
     def forward_core(self, head_output, rnn_states):
         x, new_rnn_states = self.core(head_output, rnn_states)
+        
+        # TODO should option selection occur here?
+        self.terminations = self.termination(x)
+        rand_num = torch.rand(1)
+		self.terminations = torch.where(self.terminations > rand_num, torch.ones(1), torch.zeros(1))
+        self.select_new_option(x)
+
         return x, new_rnn_states
+
+    def select_new_option(self, core_output):
+		new_options = torch.argmax(core_output, 1)[self.terminations == 1]
+		random_options = torch.ones(1).random_(0, self.num_options).long().squeeze()[self.terminations == 1]
+		random_numbers = torch.rand(1).squeeze()[self.terminations == 1]
+
+		new_options = torch.where(random_numbers > self.options_epsilon.expand_as(random_numbers), new_options, random_options)
+
+		self.current_option = self.current_option.squeeze()
+		self.current_option[self.terminations == 1] = new_options
+
+		self.current_option = self.current_option.unsqueeze(-1)
 
     def forward_tail(self, core_output, with_action_distribution=False):
         values = self.critic_linear(core_output)
-
-        action_distribution_params, action_distribution = self.action_parameterization(core_output)
+        action_distribution_params, action_distribution = self.action_parameterization(core_output, self.current_option)
 
         # for non-trivial action spaces it is faster to do these together
         actions, log_prob_actions = sample_actions_log_probs(action_distribution)
@@ -386,6 +411,7 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
             action_logits=action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
             log_prob_actions=log_prob_actions,
             values=values,
+            term_prob = term_prob
         ))
 
         if with_action_distribution:
@@ -399,6 +425,11 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         result = self.forward_tail(x, with_action_distribution=with_action_distribution)
         result.rnn_states = new_rnn_states
         return result
+
+    def select_new_option(self, core_output):
+        values = self.critic_linear(core_output)
+
+        new_options = torch.argmax()
 
 
 def create_actor_critic(cfg, obs_space, action_space, timing=None):

@@ -1,5 +1,5 @@
 """
-Algorithm entry poing.
+Algorithm entry point.
 Methods of the appooc class initiate all other components (rollout & policy workers and learners) in the main thread,
 and then fork their separate processes.
 All data structures that are shared between processes are also created during the construction of appooc.
@@ -86,6 +86,8 @@ class APPOOC(ReinforcementLearningAlgorithm):
                  'For V-trace recurrence should be equal to rollout length.',
         )
 
+        p.add_argument('--num_options', default=8, type=int, help='Number of options to use for Option Critic')
+        p.add_argument('--options_epsilon', type=float, help='Option epsilon value for Option Critic')
         p.add_argument('--use_rnn', default=True, type=str2bool, help='Whether to use RNN core in a policy or not')
         p.add_argument('--rnn_type', default='gru', choices=['gru', 'lstm'], type=str, help='Type of RNN cell to use if use_rnn is True')
         p.add_argument('--rnn_num_layers', default=1, type=int, help='Number of RNN layers to use if use_rnn is True')
