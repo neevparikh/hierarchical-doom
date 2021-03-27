@@ -430,7 +430,7 @@ class ActionParameterizationOption(ActionsParameterizationBase):
         super().__init__(cfg, action_space)
 
         self.num_action_outputs = calc_num_logits(action_space)
-        self.num_options = num_options
+        self.num_options = cfg.num_options
         self.distribution_linear = nn.Linear(core_out_size,
                                              self.num_action_outputs * cfg.num_options)
 
