@@ -15,8 +15,12 @@ from utils.utils import experiments_dir, ensure_dir_exists, project_tmp_dir
 class TestParams(TestCase):
     def test_param_list(self):
         params = [
-            {'p1': 1, 'p2': 'a'},
-            {'p2': 'b', 'p4': 'test'},
+            {
+                'p1': 1, 'p2': 'a'
+            },
+            {
+                'p2': 'b', 'p4': 'test'
+            },
         ]
         param_list = ParamList(params)
         param_combinations = list(param_list.generate_params(randomize=False))

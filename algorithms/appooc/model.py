@@ -47,30 +47,20 @@ class CPCA(nn.Module):
         return torch.cat(embedded, -1)
 
     def _build_unfolded(self, x, k: int):
-        return (
-            torch.cat((x, x.new_zeros(x.size(0), k, x.size(2))), 1)
-            .unfold(1, size=k, step=1)
-            .permute(3, 0, 1, 2)
-        )
+        return (torch.cat((x, x.new_zeros(x.size(0), k, x.size(2))),
+                          1).unfold(1, size=k, step=1).permute(3, 0, 1, 2))
 
     def _build_mask_and_subsample(
-        self, not_dones
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
+            self, not_dones) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         t = not_dones.size(1)
 
-        not_dones_unfolded = self._build_unfolded(
-            not_dones[:, :-1].to(dtype=torch.bool), self.k
-        )
+        not_dones_unfolded = self._build_unfolded(not_dones[:, :-1].to(dtype=torch.bool), self.k)
 
-        time_subsample = torch.randperm(
-            t - 1, device=not_dones.device, dtype=torch.long
-        )[0:self.time_subsample]
+        time_subsample = torch.randperm(t - 1, device=not_dones.device,
+                                        dtype=torch.long)[0:self.time_subsample]
 
-        forward_mask = (
-            torch.cumprod(not_dones_unfolded.index_select(2, time_subsample), dim=0)
-            .to(dtype=torch.bool)
-            .flatten(1, 2)
-        )
+        forward_mask = (torch.cumprod(not_dones_unfolded.index_select(2, time_subsample),
+                                      dim=0).to(dtype=torch.bool).flatten(1, 2))
 
         max_k = forward_mask.flatten(1).any(-1).nonzero().max().item() + 1
 
@@ -88,12 +78,16 @@ class CPCA(nn.Module):
         t = actions.size(1)
 
         mask_res = self._build_mask_and_subsample(not_dones)
-        (forward_mask, unroll_subsample, time_subsample, max_k,) = mask_res
+        (
+            forward_mask,
+            unroll_subsample,
+            time_subsample,
+            max_k,
+        ) = mask_res
 
         actions = self.embed_actions(actions.long())
-        actions_unfolded = self._build_unfolded(actions[:, :-1], max_k).index_select(
-            2, time_subsample
-        )
+        actions_unfolded = self._build_unfolded(actions[:, :-1],
+                                                max_k).index_select(2, time_subsample)
 
         rnn_outputs_subsampled = rnn_outputs[:, :-1].index_select(1, time_subsample)
         forward_preds, _ = self.rnn(
@@ -102,42 +96,40 @@ class CPCA(nn.Module):
         )
         forward_preds = forward_preds.index_select(0, unroll_subsample)
         forward_targets = self._build_unfolded(rnn_inputs[:, 1:], max_k)
-        forward_targets = (
-            forward_targets.index_select(2, time_subsample)
-            .index_select(0, unroll_subsample)
-            .flatten(1, 2)
-        )
+        forward_targets = (forward_targets.index_select(2, time_subsample).index_select(
+            0, unroll_subsample).flatten(1, 2))
 
         positives = self.predictor(torch.cat((forward_preds, forward_targets), dim=-1))
-        positive_loss = F.binary_cross_entropy_with_logits(
-            positives, torch.broadcast_tensors(positives, positives.new_ones(()))[1], reduction="none"
-        )
+        positive_loss = F.binary_cross_entropy_with_logits(positives,
+                                                           torch.broadcast_tensors(
+                                                               positives, positives.new_ones(
+                                                                   ()))[1],
+                                                           reduction="none")
         positive_loss = torch.masked_select(positive_loss, forward_mask).mean()
 
-        forward_negatives = torch.randint(
-            0, n * t, size=(self.forward_subsample * self.time_subsample * n * 20,), dtype=torch.long, device=actions.device
-        )
-        forward_negatives = (
-            rnn_inputs.flatten(0, 1)
-            .index_select(0, forward_negatives)
-            .view(self.forward_subsample, self.time_subsample * n, 20, -1)
-        )
+        forward_negatives = torch.randint(0,
+                                          n * t,
+                                          size=(self.forward_subsample * self.time_subsample * n *
+                                                20,),
+                                          dtype=torch.long,
+                                          device=actions.device)
+        forward_negatives = (rnn_inputs.flatten(0, 1).index_select(0, forward_negatives).view(
+            self.forward_subsample, self.time_subsample * n, 20, -1))
         negatives = self.predictor(
             torch.cat(
                 (
-                    forward_preds.view(self.forward_subsample, self.time_subsample * n, 1, -1)
-                        .expand(-1, -1, 20, -1),
+                    forward_preds.view(self.forward_subsample, self.time_subsample * n, 1,
+                                       -1).expand(-1, -1, 20, -1),
                     forward_negatives,
                 ),
                 dim=-1,
-            )
-        )
-        negative_loss = F.binary_cross_entropy_with_logits(
-            negatives, torch.broadcast_tensors(negatives, negatives.new_zeros(()))[1], reduction="none"
-        )
-        negative_loss = torch.masked_select(
-            negative_loss, forward_mask.unsqueeze(2)
-        ).mean()
+            ))
+        negative_loss = F.binary_cross_entropy_with_logits(negatives,
+                                                           torch.broadcast_tensors(
+                                                               negatives, negatives.new_zeros(
+                                                                   ()))[1],
+                                                           reduction="none")
+        negative_loss = torch.masked_select(negative_loss, forward_mask.unsqueeze(2)).mean()
 
         return 0.1 * (positive_loss + negative_loss)
 
@@ -153,13 +145,19 @@ class _ActorCriticBase(nn.Module):
 
     def get_action_parameterization(self, core_output_size):
         if self.cfg.algo == 'APPOOC':
-            action_parameterization = ActionParameterizationOption(self.cfg, core_output_size, self.action_space)
+            action_parameterization = ActionParameterizationOption(self.cfg,
+                                                                   core_output_size,
+                                                                   self.action_space)
         elif not self.cfg.adaptive_stddev and is_continuous_action_space(self.action_space):
             action_parameterization = ActionParameterizationContinuousNonAdaptiveStddev(
-                self.cfg, core_output_size, self.action_space,
+                self.cfg,
+                core_output_size,
+                self.action_space,
             )
         else:
-            action_parameterization = ActionParameterizationDefault(self.cfg, core_output_size, self.action_space)
+            action_parameterization = ActionParameterizationDefault(self.cfg,
+                                                                    core_output_size,
+                                                                    self.action_space)
 
         return action_parameterization
 
@@ -235,12 +233,14 @@ class _ActorCriticSharedWeights(_ActorCriticBase):
         # for non-trivial action spaces it is faster to do these together
         actions, log_prob_actions = sample_actions_log_probs(action_distribution)
 
-        result = AttrDict(dict(
-            actions=actions,
-            action_logits=action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
-            log_prob_actions=log_prob_actions,
-            values=values,
-        ))
+        result = AttrDict(
+            dict(
+                actions=actions,
+                action_logits=
+                action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
+                log_prob_actions=log_prob_actions,
+                values=values,
+            ))
 
         if with_action_distribution:
             result.action_distribution = action_distribution
@@ -272,7 +272,8 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
 
         self.critic_linear = nn.Linear(self.critic_core.get_core_out_size(), 1)
 
-        self.action_parameterization = self.get_action_parameterization(self.critic_core.get_core_out_size())
+        self.action_parameterization = self.get_action_parameterization(
+            self.critic_core.get_core_out_size())
 
         self.apply(self.initialize_weights)
 
@@ -326,12 +327,13 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
         # second core output corresponds to the critic
         values = self.critic_linear(core_outputs[1])
 
-        result = AttrDict(dict(
-            actions=actions,
-            action_logits=action_distribution_params,
-            log_prob_actions=log_prob_actions,
-            values=values,
-        ))
+        result = AttrDict(
+            dict(
+                actions=actions,
+                action_logits=action_distribution_params,
+                log_prob_actions=log_prob_actions,
+                values=values,
+            ))
 
         if with_action_distribution:
             result.action_distribution = action_distribution
@@ -344,7 +346,6 @@ class _ActorCriticSeparateWeights(_ActorCriticBase):
         result = self.forward_tail(x, with_action_distribution=with_action_distribution)
         result.rnn_states = new_rnn_states
         return result
-
 
 
 class _OptionCriticSharedWeights(_ActorCriticBase):
@@ -360,9 +361,11 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
 
         core_out_size = self.core.get_core_out_size()
 
-        self.critic_linear = nn.Linear(core_out_size, cfg.num_options) # value over options
-        self.action_parameterization = self.get_action_parameterization(core_out_size) # policy for each option
-        self.termination = nn.Sequential(nn.Linear(core_out_size, cfg.num_options), nn.Sigmoid()) # termination prob for each option
+        self.critic_linear = nn.Linear(core_out_size, cfg.num_options)  # value over options
+        self.action_parameterization = self.get_action_parameterization(
+            core_out_size)  # policy for each option
+        self.termination = nn.Sequential(nn.Linear(core_out_size, cfg.num_options),
+                                         nn.Sigmoid())  # termination prob for each option
 
         self.apply(self.initialize_weights)
         self.train()  # eval() for inference?
@@ -377,13 +380,15 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         return x
 
     def forward_core(self, head_output, rnn_states):
-        x, new_rnn_states = self.core(head_output, rnn_states) 
+        x, new_rnn_states = self.core(head_output, rnn_states)
         return x, new_rnn_states
 
     def forward_tail(self, core_output, with_action_distribution=False):
 
         self.termination_prob = self.termination(core_output)
-	self.termination_mask = torch.where(self.termination_prob > random(), torch.ones(1), torch.zeros(1))
+        self.termination_mask = torch.where(self.termination_prob > random(),
+                                            torch.ones(1),
+                                            torch.zeros(1))
 
         values = self.critic_linear(core_output)
         action_distribution_params, action_distribution = self.action_parameterization(core_output, self.current_option)
@@ -391,15 +396,17 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         # for non-trivial action spaces it is faster to do these together
         actions, log_prob_actions = sample_actions_log_probs(action_distribution)
 
-        result = AttrDict(dict(
-            actions=actions,
-            action_logits=action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
-            log_prob_actions=log_prob_actions,
-            values=values,
-            termination_prob=self.termination_prob,
-            termination_mask=self.termination_mask,
-            option_idx=self.current_option,
-        ))
+        result = AttrDict(
+            dict(
+                actions=actions,
+                action_logits=
+                action_distribution_params,  # perhaps `action_logits` is not the best name here since we now support continuous actions
+                log_prob_actions=log_prob_actions,
+                values=values,
+                termination_prob=self.termination_prob,
+                termination_mask=self.termination_mask,
+                option_idx=self.current_option,
+            ))
 
         if with_action_distribution:
             result.action_distribution = action_distribution
@@ -426,7 +433,7 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
 def create_actor_critic(cfg, obs_space, action_space, timing=None):
     if timing is None:
         timing = Timing()
-                
+
     def make_encoder():
         return create_encoder(cfg, obs_space, timing)
 

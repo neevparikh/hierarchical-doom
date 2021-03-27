@@ -60,11 +60,11 @@ class StackFramesWrapper(gym.core.Wrapper):
     Gym env wrapper to stack multiple frames.
     Useful for training feed-forward agents on dynamic games.
     """
-
     def __init__(self, env, stack_past_frames, channel_config='HWC'):
         super(StackFramesWrapper, self).__init__(env)
         if len(env.observation_space.shape) not in [1, 2]:
-            raise Exception('Stack frames works with vector observations and 2D single channel images')
+            raise Exception(
+                'Stack frames works with vector observations and 2D single channel images')
         self._stack_past = stack_past_frames
         self._frames = None
 
@@ -117,7 +117,6 @@ class StackFramesWrapper(gym.core.Wrapper):
 
 class SkipFramesWrapper(gym.core.Wrapper):
     """Wrapper for action repeat over N frames to speed up training."""
-
     def __init__(self, env, skip_frames=4):
         super(SkipFramesWrapper, self).__init__(env)
         self._skip_frames = skip_frames
@@ -144,7 +143,6 @@ class SkipFramesWrapper(gym.core.Wrapper):
 
 class SkipAndStackFramesWrapper(StackFramesWrapper):
     """Wrapper for action repeat + stack multiple frames to capture dynamics."""
-
     def __init__(self, env, skip_frames=4, stack_frames=4, channel_config='HWC'):
         super().__init__(env, stack_past_frames=stack_frames, channel_config=channel_config)
         self._skip_frames = skip_frames
@@ -171,7 +169,6 @@ class NormalizeWrapper(gym.core.Wrapper):
     For environments with vector lowdim input.
 
     """
-
     def __init__(self, env):
         super(NormalizeWrapper, self).__init__(env)
         if len(env.observation_space.shape) != 1:
@@ -184,7 +181,10 @@ class NormalizeWrapper(gym.core.Wrapper):
         self._max = env.observation_space.high
 
         self.observation_space = spaces.Box(
-            -self._normalize_to, self._normalize_to, shape=env.observation_space.shape, dtype=np.float32,
+            -self._normalize_to,
+            self._normalize_to,
+            shape=env.observation_space.shape,
+            dtype=np.float32,
         )
 
     def _normalize(self, obs):
@@ -207,7 +207,6 @@ class NormalizeWrapper(gym.core.Wrapper):
 
 class ResizeWrapper(gym.core.Wrapper):
     """Resize observation frames to specified (w,h) and convert to grayscale."""
-
     def __init__(self, env, w, h, grayscale=True, add_channel_dim=False, area_interpolation=False):
         super(ResizeWrapper, self).__init__(env)
 
@@ -339,7 +338,6 @@ class TimeLimitWrapper(gym.core.Wrapper):
 
 class RemainingTimeWrapper(ObservationWrapper):
     """Designed to be used together with TimeLimitWrapper."""
-
     def __init__(self, env):
         super(RemainingTimeWrapper, self).__init__(env)
 
@@ -370,7 +368,6 @@ class RemainingTimeWrapper(ObservationWrapper):
 
 class PixelFormatChwWrapper(ObservationWrapper):
     """TODO? This can be optimized for VizDoom, can we query CHW directly from VizDoom?"""
-
     def __init__(self, env):
         super().__init__(env)
 
@@ -398,7 +395,8 @@ class PixelFormatChwWrapper(ObservationWrapper):
         new_shape = [c, h, w]
 
         if self.dict_obs_space:
-            dtype = env.observation_space.spaces['obs'].dtype if env.observation_space.spaces['obs'].dtype is not None else np.float32
+            dtype = env.observation_space.spaces['obs'].dtype if env.observation_space.spaces[
+                'obs'].dtype is not None else np.float32
         else:
             dtype = env.observation_space.dtype if env.observation_space.dtype is not None else np.float32
 
@@ -466,7 +464,9 @@ class RecordingWrapper(gym.core.Wrapper):
             os.rename(self._episode_recording_dir, new_dir_name)
             log.info(
                 'Finished recording %s (rew %.3f, shaping %.3f)',
-                new_dir_name, reward, self._recorded_episode_shaping_reward,
+                new_dir_name,
+                reward,
+                self._recorded_episode_shaping_reward,
             )
 
         dir_name = f'ep_{self._record_id:03d}_p{self._player_id}'

@@ -64,15 +64,24 @@ class VizdoomVisionNetwork(VisionNetwork):
             vis_input_flat = flatten(obs)
 
             if measurements is not None:
-                measurements_fc = tf.layers.dense(measurements, 128, activation=fcnet_activation, name=f'm_fc1')
-                measurements_fc = tf.layers.dense(measurements_fc, 128, activation=fcnet_activation, name=f'm_fc2')
+                measurements_fc = tf.layers.dense(measurements,
+                                                  128,
+                                                  activation=fcnet_activation,
+                                                  name=f'm_fc1')
+                measurements_fc = tf.layers.dense(measurements_fc,
+                                                  128,
+                                                  activation=fcnet_activation,
+                                                  name=f'm_fc2')
                 all_input = tf.concat([vis_input_flat, measurements_fc], axis=1)
             else:
                 all_input = vis_input_flat
 
             fc_hiddens = [512]
             for i, fc_hidden in enumerate(fc_hiddens, 1):
-                hidden = tf.layers.dense(all_input, fc_hidden, activation=fcnet_activation, name=f'fc{i}')
+                hidden = tf.layers.dense(all_input,
+                                         fc_hidden,
+                                         activation=fcnet_activation,
+                                         name=f'fc{i}')
 
             # this will be used later for value function
             last_hidden = hidden

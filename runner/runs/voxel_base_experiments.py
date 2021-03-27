@@ -1,7 +1,17 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
 _params = ParamGrid([
-    ('env', ['voxel_env_TowerBuilding', 'voxel_env_ObstaclesEasy', 'voxel_env_ObstaclesHard', 'voxel_env_Collect', 'voxel_env_Sokoban', 'voxel_env_HexMemory', 'voxel_env_HexExplore', 'voxel_env_Rearrange']),
+    ('env',
+     [
+         'voxel_env_TowerBuilding',
+         'voxel_env_ObstaclesEasy',
+         'voxel_env_ObstaclesHard',
+         'voxel_env_Collect',
+         'voxel_env_Sokoban',
+         'voxel_env_HexMemory',
+         'voxel_env_HexExplore',
+         'voxel_env_Rearrange'
+     ]),
     ('use_cpc', ['True']),
     ('seed', [11111, 22222, 33333]),
 ])

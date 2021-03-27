@@ -8,7 +8,6 @@ from pathlib import Path
 
 from utils.utils import ensure_dir_exists, log, safe_ensure_dir_exists
 
-
 LEVEL_SEEDS_FILE_EXT = 'dm_lvl_seeds'
 
 # we normally don't need more than 30 tasks (for DMLab-30), or 57 tasks for Atari
@@ -73,8 +72,7 @@ class DmlabLevelCacheGlobal:
     This class works in conjunction with fetch/write methods of the DMLab Gym env (see dmlab_gym.py)
 
     """
-
-    def __init__(self,  cache_dir, experiment_dir, all_levels_for_experiment, policy_idx):
+    def __init__(self, cache_dir, experiment_dir, all_levels_for_experiment, policy_idx):
         self.cache_dir = cache_dir
         self.experiment_dir = experiment_dir
         self.policy_idx = policy_idx
@@ -110,7 +108,9 @@ class DmlabLevelCacheGlobal:
             used_seeds_file = str(used_seeds_file)
             level = filename_to_level(os.path.relpath(used_seeds_file, used_lvl_seeds_dir))
             self.used_seeds[level] = read_seeds_file(used_seeds_file, has_keys=False)
-            log.debug('%d seeds already used in this experiment for level %s', len(self.used_seeds[level]), level)
+            log.debug('%d seeds already used in this experiment for level %s',
+                      len(self.used_seeds[level]),
+                      level)
 
             self.used_seeds[level] = set(self.used_seeds[level])
 
@@ -133,11 +133,14 @@ class DmlabLevelCacheGlobal:
         log.debug('Done initializing global DMLab level cache!')
 
     def get_used_seeds_dir(self):
-        return ensure_dir_exists(join(self.experiment_dir, f'dmlab_used_lvl_seeds_p{self.policy_idx:02d}'))
+        return ensure_dir_exists(
+            join(self.experiment_dir, f'dmlab_used_lvl_seeds_p{self.policy_idx:02d}'))
 
     def record_used_seed(self, level, seed):
         self.num_seeds_used_in_current_run[level].value += 1
-        log.debug('Updated number of used seeds for level %s (%d)', level, self.num_seeds_used_in_current_run[level].value)
+        log.debug('Updated number of used seeds for level %s (%d)',
+                  level,
+                  self.num_seeds_used_in_current_run[level].value)
 
         used_lvl_seeds_dir = self.get_used_seeds_dir()
         used_seeds_filename = join(used_lvl_seeds_dir, level_to_filename(level))
@@ -161,9 +164,9 @@ class DmlabLevelCacheGlobal:
 
                 while True:
                     if random_state is not None:
-                        new_seed = random_state.randint(0, 2 ** 31 - 1)
+                        new_seed = random_state.randint(0, 2**31 - 1)
                     else:
-                        new_seed = random.randint(0, 2 ** 31 - 1)
+                        new_seed = random.randint(0, 2**31 - 1)
 
                     if level not in self.used_seeds:
                         break
@@ -183,10 +186,16 @@ class DmlabLevelCacheGlobal:
         with self.locks[level]:
             num_used_seeds = self.num_seeds_used_in_current_run[level].value
             if num_used_seeds < len(self.available_seeds.get(level, [])):
-                log.warning('We should only add new levels to cache if we ran out of pre-generated levels (seeds)')
+                log.warning(
+                    'We should only add new levels to cache if we ran out of pre-generated levels (seeds)'
+                )
                 log.warning(
                     'Num used seeds: %d, available seeds: %d, level: %s, seed %r, key %r',
-                    num_used_seeds, len(self.available_seeds.get(level, [])), level, seed, key,
+                    num_used_seeds,
+                    len(self.available_seeds.get(level, [])),
+                    level,
+                    seed,
+                    key,
                 )
 
                 # some DMLab-30 environments, e.g. language_select_located_object may require different levels even
@@ -210,7 +219,10 @@ class DmlabLevelCacheGlobal:
             # anymore in this experiment
 
 
-def dmlab_ensure_global_cache_initialized(experiment_dir, all_levels_for_experiment, num_policies, level_cache_dir):
+def dmlab_ensure_global_cache_initialized(experiment_dir,
+                                          all_levels_for_experiment,
+                                          num_policies,
+                                          level_cache_dir):
     global DMLAB_GLOBAL_LEVEL_CACHE
 
     assert multiprocessing.current_process().name == 'MainProcess', \
@@ -222,5 +234,8 @@ def dmlab_ensure_global_cache_initialized(experiment_dir, all_levels_for_experim
         # it's easiest to achieve
 
         log.info('Initializing level cache for policy %d...', policy_id)
-        cache = DmlabLevelCacheGlobal(level_cache_dir, experiment_dir, all_levels_for_experiment, policy_id)
+        cache = DmlabLevelCacheGlobal(level_cache_dir,
+                                      experiment_dir,
+                                      all_levels_for_experiment,
+                                      policy_id)
         DMLAB_GLOBAL_LEVEL_CACHE.append(cache)

@@ -36,23 +36,50 @@ class DummySampler(AlgorithmBase):
         p = parser
         super().add_cli_args(p)
 
-        p.add_argument('--num_workers', default=multiprocessing.cpu_count(), type=int, help='Number of processes to use to sample the environment.')
-        p.add_argument('--num_envs_per_worker', default=1, type=int, help='Number of envs on a single CPU sampled sequentially.')
-
-        p.add_argument('--sample_env_frames', default=int(2e9), type=int, help='Stop after sampling this many env frames (this takes frameskip into account)')
-        p.add_argument('--sample_env_frames_per_worker', default=int(1e9), type=int, help='Stop after sampling this many env frames per worker (this takes frameskip into account)')
-        p.add_argument('--timeout_seconds', default=600, type=int, help='Stop after sampling for this many seconds')
+        p.add_argument('--num_workers',
+                       default=multiprocessing.cpu_count(),
+                       type=int,
+                       help='Number of processes to use to sample the environment.')
+        p.add_argument('--num_envs_per_worker',
+                       default=1,
+                       type=int,
+                       help='Number of envs on a single CPU sampled sequentially.')
 
         p.add_argument(
-            '--set_workers_cpu_affinity', default=True, type=str2bool,
-            help=(
-                'Whether to assign workers to specific CPU cores or not. The logic is beneficial for most workloads because prevents a lot of context switching.'
-                'However for some environments it can be better to disable it, to allow one worker to use all cores some of the time. This can be the case for some DMLab environments with very expensive episode reset'
-                'that can use parallel CPU cores for level generation.'),
+            '--sample_env_frames',
+            default=int(2e9),
+            type=int,
+            help='Stop after sampling this many env frames (this takes frameskip into account)')
+        p.add_argument(
+            '--sample_env_frames_per_worker',
+            default=int(1e9),
+            type=int,
+            help=
+            'Stop after sampling this many env frames per worker (this takes frameskip into account)'
+        )
+        p.add_argument('--timeout_seconds',
+                       default=600,
+                       type=int,
+                       help='Stop after sampling for this many seconds')
+
+        p.add_argument(
+            '--set_workers_cpu_affinity',
+            default=True,
+            type=str2bool,
+            help=
+            ('Whether to assign workers to specific CPU cores or not. The logic is beneficial for most workloads because prevents a lot of context switching.'
+             'However for some environments it can be better to disable it, to allow one worker to use all cores some of the time. This can be the case for some DMLab environments with very expensive episode reset'
+             'that can use parallel CPU cores for level generation.'),
         )
 
-        p.add_argument('--sampler_worker_gpus', default=[], type=int, nargs='*',
-                       help='By default, workers only use CPUs. Changes this if e.g. you need GPU-based rendering on the actors')
+        p.add_argument(
+            '--sampler_worker_gpus',
+            default=[],
+            type=int,
+            nargs='*',
+            help=
+            'By default, workers only use CPUs. Changes this if e.g. you need GPU-based rendering on the actors'
+        )
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -80,7 +107,7 @@ class DummySampler(AlgorithmBase):
         tmp_env.close()
 
         for i in range(self.cfg.num_workers):
-            p = multiprocessing.Process(target=self.sample, args=(i, ))
+            p = multiprocessing.Process(target=self.sample, args=(i,))
             self.processes.append(p)
 
     def sample(self, proc_idx):
@@ -90,7 +117,9 @@ class DummySampler(AlgorithmBase):
         if self.cfg.sampler_worker_gpus:
             set_gpus_for_process(
                 proc_idx,
-                num_gpus_per_process=1, process_type='sampler_proc', gpu_mask=self.cfg.sampler_worker_gpus,
+                num_gpus_per_process=1,
+                process_type='sampler_proc',
+                gpu_mask=self.cfg.sampler_worker_gpus,
             )
 
         timing = Timing()
@@ -109,10 +138,14 @@ class DummySampler(AlgorithmBase):
 
                 for env_idx in range(self.cfg.num_envs_per_worker):
                     global_env_id = proc_idx * self.cfg.num_envs_per_worker + env_idx
-                    env_config = AttrDict(worker_index=proc_idx, vector_index=env_idx, env_id=global_env_id)
+                    env_config = AttrDict(worker_index=proc_idx,
+                                          vector_index=env_idx,
+                                          env_id=global_env_id)
 
                     env = make_env_func(cfg=self.cfg, env_config=env_config)
-                    log.debug('CPU affinity after create_env: %r', psutil.Process().cpu_affinity() if platform != 'darwin' else 'MacOS - None')
+                    log.debug(
+                        'CPU affinity after create_env: %r',
+                        psutil.Process().cpu_affinity() if platform != 'darwin' else 'MacOS - None')
                     env.seed(global_env_id)
                     envs.append(env)
 
@@ -125,14 +158,19 @@ class DummySampler(AlgorithmBase):
 
             # sample a lot of random actions once, otherwise it is pretty slow in Python
             total_random_actions = 500
-            actions = [[env.action_space.sample() for _ in range(env.num_agents)] for _ in range(total_random_actions)]
+            actions = [[env.action_space.sample()
+                        for _ in range(env.num_agents)]
+                       for _ in range(total_random_actions)]
             action_i = 0
 
             try:
                 with timing.timeit('first_reset'):
                     for env_idx, env in enumerate(envs):
                         env.reset()
-                        log.info('Process %d finished resetting %d/%d envs', proc_idx, env_idx + 1, len(envs))
+                        log.info('Process %d finished resetting %d/%d envs',
+                                 proc_idx,
+                                 env_idx + 1,
+                                 len(envs))
 
                     self.report_queue.put(dict(proc_idx=proc_idx, finished_reset=True))
 
@@ -151,7 +189,8 @@ class DummySampler(AlgorithmBase):
                             episode_length[env_idx] += num_frames
 
                             if all(dones):
-                                episode_lengths[env_idx].append(episode_length[env_idx] / env.num_agents)
+                                episode_lengths[env_idx].append(episode_length[env_idx] /
+                                                                env.num_agents)
                                 episode_length[env_idx] = 0
 
                         with timing.add_time('report'):
@@ -160,7 +199,8 @@ class DummySampler(AlgorithmBase):
                                 last_report = now
                                 frames_since_last_report = total_env_frames - last_report_frames
                                 last_report_frames = total_env_frames
-                                self.report_queue.put(dict(proc_idx=proc_idx, env_frames=frames_since_last_report))
+                                self.report_queue.put(
+                                    dict(proc_idx=proc_idx, env_frames=frames_since_last_report))
 
                                 if proc_idx == 0:
                                     log.debug('Memory usage: %.4f Mb', memory_consumption_mb())
@@ -185,7 +225,9 @@ class DummySampler(AlgorithmBase):
 
             for env_idx, env in enumerate(envs):
                 if len(episode_lengths[env_idx]) > 0:
-                    log.warning('Level %s avg episode len %d', env_key[env_idx], np.mean(episode_lengths[env_idx]))
+                    log.warning('Level %s avg episode len %d',
+                                env_key[env_idx],
+                                np.mean(episode_lengths[env_idx]))
 
             for env in envs:
                 env.close()
@@ -220,7 +262,9 @@ class DummySampler(AlgorithmBase):
                 msg = self.report_queue.get(timeout=0.1)
                 if 'finished_reset' in msg:
                     finished_reset[msg['proc_idx']] = True
-                    log.debug('Process %d finished reset! Status %r', msg['proc_idx'], finished_reset)
+                    log.debug('Process %d finished reset! Status %r',
+                              msg['proc_idx'],
+                              finished_reset)
             except Empty:
                 pass
 
@@ -267,7 +311,9 @@ class DummySampler(AlgorithmBase):
                 delay = time.time() - last_process_report[proc_idx]
                 if delay > 600:
                     # killing the whole script is the best way to know that some of the processes froze
-                    log.error('Process %d had not responded in %.1f s!!! Terminating...', proc_idx, delay)
+                    log.error('Process %d had not responded in %.1f s!!! Terminating...',
+                              proc_idx,
+                              delay)
                     self.terminate.value = True
 
             for p in self.processes:
@@ -276,7 +322,10 @@ class DummySampler(AlgorithmBase):
                     log.error('Process %r died! terminating...', p)
 
         total_time = time.time() - start
-        log.info('Collected %d frames in %.1f s, avg FPS: %.1f', env_frames, total_time, env_frames / total_time)
+        log.info('Collected %d frames in %.1f s, avg FPS: %.1f',
+                 env_frames,
+                 total_time,
+                 env_frames / total_time)
         log.debug('Done sampling...')
 
     def finalize(self):

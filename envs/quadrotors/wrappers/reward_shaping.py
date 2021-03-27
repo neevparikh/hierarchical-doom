@@ -3,12 +3,16 @@ import numpy as np
 
 from envs.env_utils import RewardShapingInterface, TrainingInfoInterface
 
-DEFAULT_QUAD_REWARD_SHAPING = dict(
-    quad_rewards=dict(
-        pos=1.0, effort=0.05, spin=0.1, vel=0.0, crash=1.0, orient=1.0, yaw=0.0,
-        quadcol_bin=0.0, quadsettle=0.0, quadcol_bin_obst=0.0
-    ),
-)
+DEFAULT_QUAD_REWARD_SHAPING = dict(quad_rewards=dict(pos=1.0,
+                                                     effort=0.05,
+                                                     spin=0.1,
+                                                     vel=0.0,
+                                                     crash=1.0,
+                                                     orient=1.0,
+                                                     yaw=0.0,
+                                                     quadcol_bin=0.0,
+                                                     quadsettle=0.0,
+                                                     quadcol_bin_obst=0.0),)
 
 
 class QuadsRewardShapingWrapper(gym.Wrapper, RewardShapingInterface, TrainingInfoInterface):
@@ -82,13 +86,15 @@ class QuadsRewardShapingWrapper(gym.Wrapper, RewardShapingInterface, TrainingInf
                 extra_stats = info['episode_extra_stats']
                 extra_stats.update(self.cumulative_rewards[i])
 
-                approx_total_training_steps = self.training_info.get('approx_total_training_steps', 0)
+                approx_total_training_steps = self.training_info.get('approx_total_training_steps',
+                                                                     0)
                 extra_stats['z_approx_total_training_steps'] = approx_total_training_steps
 
                 if hasattr(self.env.unwrapped, 'scenario') and self.env.unwrapped.scenario:
                     scenario_name = self.env.unwrapped.scenario.name()
                     for rew_key in ['rew_pos', 'rewraw_pos', 'rew_crash', 'rewraw_crash']:
-                        extra_stats[f'{rew_key}_{scenario_name}'] = self.cumulative_rewards[i][rew_key]
+                        extra_stats[f'{rew_key}_{scenario_name}'] = self.cumulative_rewards[i][
+                            rew_key]
 
                 episode_actions = np.array(self.episode_actions)
                 episode_actions = episode_actions.transpose()
@@ -107,7 +113,8 @@ class QuadsRewardShapingWrapper(gym.Wrapper, RewardShapingInterface, TrainingInf
                         coeff_name = anneal_schedule.coeff_name
                         final_value = anneal_schedule.final_value
                         anneal_steps = anneal_schedule.anneal_env_steps
-                        env_reward_shaping[coeff_name] = min(final_value * approx_total_training_steps / anneal_steps, final_value)
+                        env_reward_shaping[coeff_name] = min(
+                            final_value * approx_total_training_steps / anneal_steps, final_value)
                         extra_stats[f'z_anneal_{coeff_name}'] = env_reward_shaping[coeff_name]
 
         if any(dones_multi):

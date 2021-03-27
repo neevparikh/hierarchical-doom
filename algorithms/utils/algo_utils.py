@@ -1,6 +1,5 @@
 import numpy as np
 
-
 EPS = 1e-8
 
 
@@ -23,7 +22,6 @@ class RunningMeanStd(object):
     Courtesy of OpenAI Baselines.
 
     """
-
     def __init__(self, max_past_samples=None, epsilon=1e-4, shape=()):
         self.mean = np.zeros(shape, 'float64')
         self.var = np.ones(shape, 'float64')
@@ -42,7 +40,13 @@ class RunningMeanStd(object):
         )
 
 
-def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count, max_past_samples):
+def update_mean_var_count_from_moments(mean,
+                                       var,
+                                       count,
+                                       batch_mean,
+                                       batch_var,
+                                       batch_count,
+                                       max_past_samples):
     """Courtesy of OpenAI Baselines."""
     if max_past_samples is not None:
         # pretend we never have more than n past samples, this will guarantee a constant convergence rate

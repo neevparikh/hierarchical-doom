@@ -14,16 +14,55 @@ from utils.utils import log, ensure_dir_exists
 
 set_matplotlib_params()
 
-plt.rcParams['figure.figsize'] = (5.5, 2.3) #(2.5, 2.0) 7.5， 4
-
+plt.rcParams['figure.figsize'] = (5.5, 2.3)  #(2.5, 2.0) 7.5， 4
 
 B = int(1e9)
 
 EXPERIMENTS = {
-    'doom_battle': dict(is_pbt=False, dir='doom_battle_appo_v56_4p', key='0_aux/avg_reward', x_ticks=[0, B, 2*B, 3*B, 4*B], max_x=4*B, y_ticks=[0, 10, 20, 30, 40, 50], x_label='Env. frames, skip=4', title='Battle', baselines=((33, 'DFP'), (35, 'DFP+CV')), legend='SampleFactory'),
-    'doom_battle2': dict(is_pbt=False, dir='doom_battle2_appo_v65_fs4', key='0_aux/avg_true_reward', x_ticks=[0, B, 2*B, 3*B], max_x=3*B, y_ticks=[0, 5, 10, 15, 20, 25], x_label='Env. frames, skip=4', title='Battle2', baselines=((17, 'DFP'), ), legend='SampleFactory'),
-    'doom_deathmatch': dict(is_pbt=True, dir='doom_bots_v63_pbt', key='0_aux/avg_true_reward', x_ticks=[0, B//2, B, 3*B//2, 2*B, 5*B//2], max_x=5*B//2, y_ticks=[0, 20, 40, 60, 80], x_label='Env. frames, skip=2', title='Deathmatch vs bots', baselines=((12.6, 'Avg. scripted bot'), (22, 'Best scripted bot')), legend='Population mean'),
-    'doom_duel': dict(is_pbt=True, dir='paper_doom_duel_bots_v65_fs2', key='0_aux/avg_true_reward', x_ticks=[0, B//2, B, 3*B//2, 2*B, 5*B//2], max_x=5*B//2, y_ticks=[0, 10, 20, 30, 40], x_label='Env. frames, skip=2', title='Duel vs bots', baselines=((3.66, 'Avg. scripted bot'), (5, 'Best scripted bot')), legend='Population mean'),
+    'doom_battle':
+        dict(is_pbt=False,
+             dir='doom_battle_appo_v56_4p',
+             key='0_aux/avg_reward',
+             x_ticks=[0, B, 2 * B, 3 * B, 4 * B],
+             max_x=4 * B,
+             y_ticks=[0, 10, 20, 30, 40, 50],
+             x_label='Env. frames, skip=4',
+             title='Battle',
+             baselines=((33, 'DFP'), (35, 'DFP+CV')),
+             legend='SampleFactory'),
+    'doom_battle2':
+        dict(is_pbt=False,
+             dir='doom_battle2_appo_v65_fs4',
+             key='0_aux/avg_true_reward',
+             x_ticks=[0, B, 2 * B, 3 * B],
+             max_x=3 * B,
+             y_ticks=[0, 5, 10, 15, 20, 25],
+             x_label='Env. frames, skip=4',
+             title='Battle2',
+             baselines=((17, 'DFP'),),
+             legend='SampleFactory'),
+    'doom_deathmatch':
+        dict(is_pbt=True,
+             dir='doom_bots_v63_pbt',
+             key='0_aux/avg_true_reward',
+             x_ticks=[0, B // 2, B, 3 * B // 2, 2 * B, 5 * B // 2],
+             max_x=5 * B // 2,
+             y_ticks=[0, 20, 40, 60, 80],
+             x_label='Env. frames, skip=2',
+             title='Deathmatch vs bots',
+             baselines=((12.6, 'Avg. scripted bot'), (22, 'Best scripted bot')),
+             legend='Population mean'),
+    'doom_duel':
+        dict(is_pbt=True,
+             dir='paper_doom_duel_bots_v65_fs2',
+             key='0_aux/avg_true_reward',
+             x_ticks=[0, B // 2, B, 3 * B // 2, 2 * B, 5 * B // 2],
+             max_x=5 * B // 2,
+             y_ticks=[0, 10, 20, 30, 40],
+             x_label='Env. frames, skip=2',
+             title='Duel vs bots',
+             baselines=((3.66, 'Avg. scripted bot'), (5, 'Best scripted bot')),
+             legend='Population mean'),
 }
 
 PLOT_NAMES = dict(
@@ -40,14 +79,21 @@ def extract(env, experiments):
     # scalar_accumulators = [EventAccumulator(str(dpath / dname / subpath)).Reload().scalars
     #                        for dname in os.listdir(dpath) if dname != FOLDER_NAME and dname in hide_file]
 
-    scalar_accumulators = [EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments]
+    scalar_accumulators = [
+        EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments
+    ]
 
     # Filter non event files
-    scalar_accumulators = [scalar_accumulator for scalar_accumulator in scalar_accumulators if scalar_accumulator.Keys()]
+    scalar_accumulators = [
+        scalar_accumulator for scalar_accumulator in scalar_accumulators
+        if scalar_accumulator.Keys()
+    ]
 
     # Get and validate all scalar keys
     # zhehui sorted(scalar_accumulator.Keys())
-    all_keys = [tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators]
+    all_keys = [
+        tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators
+    ]
     # assert len(set(all_keys)) == 1, "All runs need to have the same scalar keys. There are mismatches in {}".format(all_keys)
     keys = all_keys[0]
 
@@ -61,13 +107,18 @@ def extract(env, experiments):
 
     keys = [key for key in keys if all_accumulators_have_this_key(key)]
 
-    all_scalar_events_per_key = [[scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators] for key in keys]
+    all_scalar_events_per_key = [[
+        scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators
+    ] for key in keys]
 
     # Get and validate all steps per key
     # sorted(all_scalar_events) sorted(scalar_events)
-    x_per_key = [[tuple(scalar_event.step for scalar_event in sorted(scalar_events)) for scalar_events in sorted(all_scalar_events)]
-                         for all_scalar_events in all_scalar_events_per_key]
-
+    x_per_key = [[
+        tuple(scalar_event.step
+              for scalar_event in sorted(scalar_events))
+        for scalar_events in sorted(all_scalar_events)
+    ]
+                 for all_scalar_events in all_scalar_events_per_key]
 
     # zhehui
     # import linear interpolation
@@ -76,7 +127,11 @@ def extract(env, experiments):
     # modify_all_steps_per_key = tuple(int(step_id*1e6) for step_id in range(1, int(1e8/1e6 + 1)))
     plot_step = int(1e7)
     max_x = EXPERIMENTS[env]['max_x']
-    all_steps_per_key = [[tuple(int(step_id) for step_id in range(0, max_x, plot_step)) for scalar_events in sorted(all_scalar_events)]
+    all_steps_per_key = [[
+        tuple(int(step_id)
+              for step_id in range(0, max_x, plot_step))
+        for scalar_events in sorted(all_scalar_events)
+    ]
                          for all_scalar_events in all_scalar_events_per_key]
 
     for i, all_steps in enumerate(all_steps_per_key):
@@ -90,7 +145,9 @@ def extract(env, experiments):
     #                       for all_scalar_events in all_scalar_events_per_key]
 
     # Get values per step per key
-    values_per_key = [[[scalar_event.value for scalar_event in scalar_events] for scalar_events in all_scalar_events]
+    values_per_key = [[[scalar_event.value
+                        for scalar_event in scalar_events]
+                       for scalar_events in all_scalar_events]
                       for all_scalar_events in all_scalar_events_per_key]
 
     true_reward_key = EXPERIMENTS[env]['key']
@@ -133,7 +190,10 @@ def extract(env, experiments):
 
     min_length = len(x)
     for i in range(len(values)):
-        log.debug('Values for seed %d truncated from %d to %d', i, len(interpolated_y[i]), min_length)
+        log.debug('Values for seed %d truncated from %d to %d',
+                  i,
+                  len(interpolated_y[i]),
+                  min_length)
         interpolated_y[i] = interpolated_y[i][:min_length]
 
     interpolated_keys = dict()
@@ -243,10 +303,21 @@ def plot(env, key, interpolated_key, ax, count):
     green = '#2CA02C'
 
     sf_plot, = ax.plot(x, y_mean, color=blue, label=EXPERIMENTS[env]['legend'], linewidth=lw, antialiased=True)
-    ax.fill_between(x, y_minus_std, y_plus_std, color=blue, alpha=0.25, antialiased=True, linewidth=0.0)
+    ax.fill_between(x,
+                    y_minus_std,
+                    y_plus_std,
+                    color=blue,
+                    alpha=0.25,
+                    antialiased=True,
+                    linewidth=0.0)
 
     if EXPERIMENTS[env]['is_pbt']:
-        ax.plot(x, y_max, color='#d62728', label='Population best', linewidth=lw_max, antialiased=True)
+        ax.plot(x,
+                y_max,
+                color='#d62728',
+                label='Population best',
+                linewidth=lw_max,
+                antialiased=True)
 
     if 'baselines' in EXPERIMENTS[env]:
         colors = [green, orange]
@@ -255,7 +326,12 @@ def plot(env, key, interpolated_key, ax, count):
         for baseline_i, baseline in enumerate(baselines):
             baseline_color = colors[baseline_i]
             baseline_y, baseline_name = baseline
-            ax.plot([x[0], x[-1]], [baseline_y, baseline_y], color=baseline_color, label=baseline_name, linewidth=lw_baseline, antialiased=True, linestyle='--')
+            ax.plot([x[0], x[-1]], [baseline_y, baseline_y],
+                    color=baseline_color,
+                    label=baseline_name,
+                    linewidth=lw_baseline,
+                    antialiased=True,
+                    linestyle='--')
 
     # ax.legend(prop={'size': 6}, loc='lower right')
 
@@ -304,7 +380,13 @@ def main():
 
         if group_i != 0:
             handles, labels = ax[-1].get_legend_handles_labels()
-            lgd = fig.legend(handles, labels, bbox_to_anchor=(0.1, 0.88, 0.8, 0.2), loc='lower left', ncol=4, mode="expand", prop={'size': 6})
+            lgd = fig.legend(handles,
+                             labels,
+                             bbox_to_anchor=(0.1, 0.88, 0.8, 0.2),
+                             loc='lower left',
+                             ncol=4,
+                             mode="expand",
+                             prop={'size': 6})
             lgd.set_in_layout(True)
 
         # zhehui
@@ -320,9 +402,16 @@ def main():
         plot_name = f'complex_envs_{group_i}'
 
         if group_i == 0:
-            plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_inches='tight', pad_inches=0, )
+            plt.savefig(
+                os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'),
+                format='pdf',
+                bbox_inches='tight',
+                pad_inches=0,
+            )
         else:
-            plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_extra_artists=(lgd,))
+            plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'),
+                        format='pdf',
+                        bbox_extra_artists=(lgd,))
 
     return 0
 

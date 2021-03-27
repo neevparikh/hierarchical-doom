@@ -14,5 +14,4 @@ _experiments = [
     ),
 ]
 
-
 RUN_DESCRIPTION = RunDescription('paper_doom_wall_time_v97_fs4', experiments=_experiments)

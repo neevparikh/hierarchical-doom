@@ -98,7 +98,8 @@ def doom_action_space_discretized():
         Discrete(3),  # noop, prev_weapon, next_weapon
         Discrete(2),  # noop, attack
         Discrete(2),  # noop, sprint
-        Discretized(11, min_action=-10.0, max_action=10.0),  # turning using discretized continuous control
+        Discretized(11, min_action=-10.0,
+                    max_action=10.0),  # turning using discretized continuous control
     ))
 
 
@@ -108,7 +109,8 @@ def doom_action_space_discretized_no_weap():
         Discrete(3),  # noop, move right, move left
         Discrete(2),  # noop, attack
         Discrete(2),  # noop, sprint
-        Discretized(11, min_action=-10.0, max_action=10.0),  # turning using discretized continuous control
+        Discretized(11, min_action=-10.0,
+                    max_action=10.0),  # turning using discretized continuous control
     ))
 
 
@@ -170,6 +172,7 @@ def doom_action_space_full_discretized(with_use=False):
     if with_use:
         spaces.append(Discrete(2))  # noop, use
 
-    spaces.append(Discretized(21, min_action=-12.5, max_action=12.5))  # turning using discretized continuous control
+    spaces.append(Discretized(21, min_action=-12.5,
+                              max_action=12.5))  # turning using discretized continuous control
 
     return gym.spaces.Tuple(spaces)

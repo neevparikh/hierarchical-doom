@@ -15,7 +15,6 @@ class MultiAgentWrapper(Wrapper):
     That is, the data (obs, rewards, etc.) is converted into lists of length 1
 
     """
-
     def __init__(self, env):
         super().__init__(env)
 

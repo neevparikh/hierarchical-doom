@@ -16,12 +16,10 @@ class AtariSpec:
 
 ATARI_ENVS = [
     AtariSpec('atari_montezuma', 'MontezumaRevengeNoFrameskip-v4', default_timeout=18000),
-
     AtariSpec('atari_pong', 'PongNoFrameskip-v4'),
     AtariSpec('atari_qbert', 'QbertNoFrameskip-v4'),
     AtariSpec('atari_breakout', 'BreakoutNoFrameskip-v4'),
     AtariSpec('atari_spaceinvaders', 'SpaceInvadersNoFrameskip-v4'),
-
     AtariSpec('atari_asteroids', 'AsteroidsNoFrameskip-v4'),
     AtariSpec('atari_gravitar', 'GravitarNoFrameskip-v4'),
     AtariSpec('atari_mspacman', 'MsPacmanNoFrameskip-v4'),
@@ -51,7 +49,12 @@ def make_atari_env(env_name, cfg, **kwargs):
 
     add_channel_dim = cfg.env_framestack == 1
     env = ResizeWrapper(
-        env, ATARI_W, ATARI_H, grayscale=True, add_channel_dim=add_channel_dim, area_interpolation=False,
+        env,
+        ATARI_W,
+        ATARI_H,
+        grayscale=True,
+        add_channel_dim=add_channel_dim,
+        area_interpolation=False,
     )
 
     pixel_format = cfg.pixel_format if 'pixel_format' in cfg else 'HWC'
@@ -61,5 +64,8 @@ def make_atari_env(env_name, cfg, **kwargs):
     if cfg.env_framestack == 1:
         env = SkipFramesWrapper(env, skip_frames=cfg.env_frameskip)
     else:
-        env = SkipAndStackFramesWrapper(env, skip_frames=cfg.env_frameskip, stack_frames=4, channel_config='CHW')
+        env = SkipAndStackFramesWrapper(env,
+                                        skip_frames=cfg.env_frameskip,
+                                        stack_frames=4,
+                                        channel_config='CHW')
     return env

@@ -111,7 +111,8 @@ def set_global_cuda_envvars(cfg):
     if cfg.device == 'cpu':
         available_gpus = ''
     else:
-        available_gpus = get_available_gpus_without_triggering_pytorch_cuda_initialization(os.environ)
+        available_gpus = get_available_gpus_without_triggering_pytorch_cuda_initialization(
+            os.environ)
 
     if CUDA_ENVVAR not in os.environ:
         os.environ[CUDA_ENVVAR] = available_gpus
@@ -145,7 +146,10 @@ def set_gpus_for_process(process_idx, num_gpus_per_process, process_type, gpu_ma
         os.environ[CUDA_ENVVAR] = ','.join([str(g) for g in gpus_to_use])
         log.info(
             'Set environment var %s to %r for %s process %d',
-            CUDA_ENVVAR, os.environ[CUDA_ENVVAR], process_type, process_idx,
+            CUDA_ENVVAR,
+            os.environ[CUDA_ENVVAR],
+            process_type,
+            process_idx,
         )
         log.debug('Visible devices: %r', torch.cuda.device_count())
 
@@ -188,7 +192,9 @@ class TensorBatcher:
             old_batch_size = tensor_batch_size(tensor_batch)
             if old_batch_size != macro_batch_size:
                 # this can happen due to PBT changing batch size during the experiment
-                log.warning('Tensor macro-batch size changed from %d to %d!', old_batch_size, macro_batch_size)
+                log.warning('Tensor macro-batch size changed from %d to %d!',
+                            old_batch_size,
+                            macro_batch_size)
                 log.warning('Discarding the cached tensor batch!')
                 del tensor_batch
                 tensor_batch = None

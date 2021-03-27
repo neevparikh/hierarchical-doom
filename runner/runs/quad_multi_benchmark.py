@@ -12,7 +12,7 @@ _experiment = Experiment(
 
 RUN_DESCRIPTION = RunDescription('quads_multi_benchmark_v112', experiments=[_experiment])
 
-# Note: Before using this script and running the script, I would recommend you 
+# Note: Before using this script and running the script, I would recommend you
 # reading the spreadsheet, page: Compare_sanity_check, first.
 
 # On Brain server, when you use num_workers = 72, if the system reports: Resource temporarily unavailable,

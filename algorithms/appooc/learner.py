@@ -34,7 +34,9 @@ from utils.utils import log, AttrDict, experiment_dir, ensure_dir_exists, join_o
 
 
 # noinspection PyPep8Naming
-def _build_pack_info_from_dones(dones: torch.Tensor, T: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def _build_pack_info_from_dones(
+        dones: torch.Tensor,
+        T: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Create the indexing info needed to make the PackedSequence based on the dones.
 
@@ -60,7 +62,9 @@ def _build_pack_info_from_dones(dones: torch.Tensor, T: int) -> Tuple[torch.Tens
     first_len = rollout_boundaries[0].unsqueeze(0)
 
     if len(rollout_boundaries) <= 1:
-        log.debug('Only one rollout boundary. This can happen if batch size is 1, probably not during the real training.')
+        log.debug(
+            'Only one rollout boundary. This can happen if batch size is 1, probably not during the real training.'
+        )
         rollout_lengths = first_len
     else:
         rollout_lengths = rollout_boundaries[1:] - rollout_boundaries[:-1]
@@ -76,7 +80,7 @@ def _build_pack_info_from_dones(dones: torch.Tensor, T: int) -> Tuple[torch.Tens
     # roll() is cyclical, so done=True in the last position in the rollout will roll to 0th position
     # we want to avoid it here. (note to self: is there a function that does two of these things at once?)
     is_new_episode[:, 0] = 0
-    is_new_episode = is_new_episode.view((-1, ))
+    is_new_episode = is_new_episode.view((-1,))
 
     lengths, sorted_indices = torch.sort(rollout_lengths, descending=True)
     # We will want these on the CPU for torch.unique_consecutive,
@@ -112,10 +116,9 @@ def _build_pack_info_from_dones(dones: torch.Tensor, T: int) -> Tuple[torch.Tens
 
         batch_sizes[prev_len:next_len] = num_valid_for_length
 
-        new_inds = (
-            rollout_starts_sorted[0:num_valid_for_length].view(1, num_valid_for_length)
-            + torch.arange(prev_len, next_len, device=rollout_starts_sorted.device).view(next_len - prev_len, 1)
-        ).view(-1)
+        new_inds = (rollout_starts_sorted[0:num_valid_for_length].view(1, num_valid_for_length) +
+                    torch.arange(prev_len, next_len, device=rollout_starts_sorted.device).view(
+                        next_len - prev_len, 1)).view(-1)
 
         # for a set of sequences [1, 2, 3], [4, 5], [6, 7], [8]
         # these indices will be 1,4,6,8,2,5,7,3
@@ -182,8 +185,17 @@ def build_core_out_from_seq(x_seq: PackedSequence, inverted_select_inds):
 
 class LearnerWorker:
     def __init__(
-        self, worker_idx, policy_id, cfg, obs_space, action_space, report_queue, policy_worker_queues, shared_buffers,
-        policy_lock, resume_experience_collection_cv,
+        self,
+        worker_idx,
+        policy_id,
+        cfg,
+        obs_space,
+        action_space,
+        report_queue,
+        policy_worker_queues,
+        shared_buffers,
+        policy_lock,
+        resume_experience_collection_cv,
     ):
         log.info('Initializing the learner %d for policy %d', worker_idx, policy_id)
 
@@ -260,7 +272,8 @@ class LearnerWorker:
 
         self.process = Process(target=self._run, daemon=True)
 
-        if is_continuous_action_space(self.action_space) and self.cfg.exploration_loss == 'symmetric_kl':
+        if is_continuous_action_space(
+                self.action_space) and self.cfg.exploration_loss == 'symmetric_kl':
             raise NotImplementedError('KL-divergence exploration loss is not supported with '
                                       'continuous action spaces. Use entropy exploration loss')
 
@@ -332,7 +345,9 @@ class LearnerWorker:
 
     def _mark_rollout_buffer_free(self, rollout):
         r = rollout
-        self.traj_tensors_available[r.worker_idx, r.split_idx][r.env_idx, r.agent_idx, r.traj_buffer_idx] = 1
+        self.traj_tensors_available[r.worker_idx, r.split_idx][r.env_idx,
+                                                               r.agent_idx,
+                                                               r.traj_buffer_idx] = 1
 
     def _prepare_train_buffer(self, rollouts, macro_batch_size, timing):
         trajectories = [AttrDict(r['t']) for r in rollouts]
@@ -354,7 +369,8 @@ class LearnerWorker:
 
         if not self.cfg.with_vtrace:
             with timing.add_time('calc_gae'):
-                buffer.values = buffer.values[:, buffer.option_idx].squeeze() # TODO: Check the indexing
+                buffer.values = buffer.values[:, buffer.option_idx].squeeze(
+                )  # TODO: Check the indexing
                 buffer = self._calculate_gae(buffer)
 
         with timing.add_time('batching'):
@@ -374,8 +390,13 @@ class LearnerWorker:
         with timing.add_time('squeeze'):
             # will squeeze actions only in simple categorical case
             tensors_to_squeeze = [
-                'actions', 'log_prob_actions', 'policy_version',
-                'rewards', 'dones', 'rewards_cpu', 'dones_cpu',
+                'actions',
+                'log_prob_actions',
+                'policy_version',
+                'rewards',
+                'dones',
+                'rewards_cpu',
+                'dones_cpu',
             ]
             for tensor_name in tensors_to_squeeze:
                 device_buffer[tensor_name].squeeze_()
@@ -434,7 +455,9 @@ class LearnerWorker:
         if discard_rollouts > 0:
             log.warning(
                 'Discarding %d old rollouts, cut by policy lag threshold %d (learner %d)',
-                discard_rollouts, self.cfg.max_policy_lag, self.policy_id,
+                discard_rollouts,
+                self.cfg.max_policy_lag,
+                self.policy_id,
             )
             rollouts = rollouts[discard_rollouts:]
             self.num_discarded_rollouts += discard_rollouts
@@ -617,7 +640,8 @@ class LearnerWorker:
                 device_buffer[key] = device_tensor.float()
 
         device_buffer['dones_cpu'] = buffer.dones.to('cpu', copy=True, non_blocking=True).float()
-        device_buffer['rewards_cpu'] = buffer.rewards.to('cpu', copy=True, non_blocking=True).float()
+        device_buffer['rewards_cpu'] = buffer.rewards.to('cpu', copy=True,
+                                                         non_blocking=True).float()
 
         return device_buffer
 
@@ -686,24 +710,26 @@ class LearnerWorker:
                     if self.cfg.use_rnn:
                         with timing.add_time('bptt_forward_core'):
                             core_output_seq, _ = self.actor_critic.forward_core(head_output_seq, rnn_states)
-                        core_outputs = build_core_out_from_seq(core_output_seq, inverted_select_inds)
+                        core_outputs = build_core_out_from_seq(core_output_seq,
+                                                               inverted_select_inds)
                     else:
                         core_outputs, _ = self.actor_critic.forward_core(head_outputs, rnn_states)
 
                 num_trajectories = head_outputs.size(0) // recurrence
                 if self.aux_loss_module is not None:
                     with timing.add_time('aux_loss'):
-                        aux_loss = self.aux_loss_module(mb.actions.view(num_trajectories, recurrence, -1),
-                                                       (1.0 - mb.dones).view(num_trajectories, recurrence, 1),
-                                                       head_outputs.view(num_trajectories, recurrence, -1),
-                                                       core_outputs.view(num_trajectories, recurrence, -1)
-                                                       )
+                        aux_loss = self.aux_loss_module(
+                            mb.actions.view(num_trajectories, recurrence, -1),
+                            (1.0 - mb.dones).view(num_trajectories, recurrence, 1),
+                            head_outputs.view(num_trajectories, recurrence, -1),
+                            core_outputs.view(num_trajectories, recurrence, -1))
 
                 with timing.add_time('tail'):
                     assert core_outputs.shape[0] == head_outputs.shape[0]
 
                     # calculate policy tail outside of recurrent loop
-                    result = self.actor_critic.forward_tail(core_outputs, with_action_distribution=True)
+                    result = self.actor_critic.forward_tail(core_outputs,
+                                                            with_action_distribution=True)
 
                     action_distribution = result.action_distribution
                     log_prob_actions = action_distribution.log_prob(mb.actions)
@@ -712,9 +738,10 @@ class LearnerWorker:
                     # super large/small values can cause numerical problems and are probably noise anyway
                     ratio = torch.clamp(ratio, 0.05, 20.0)
 
-                    values = result.values[:, mb.option_idx].squeeze() # TODO: Check the indexing
+                    values = result.values[:, mb.option_idx].squeeze()  # TODO: Check the indexing
 
-                with torch.no_grad():  # these computations are not the part of the computation graph
+                with torch.no_grad(
+                ):  # these computations are not the part of the computation graph
                     if self.cfg.with_vtrace:
                         ratios_cpu = ratio.cpu()
                         values_cpu = values.cpu()
@@ -727,7 +754,8 @@ class LearnerWorker:
                         vs = torch.zeros((num_trajectories * recurrence))
                         adv = torch.zeros((num_trajectories * recurrence))
 
-                        next_values = (values_cpu[recurrence - 1::recurrence] - rewards_cpu[recurrence - 1::recurrence]) / gamma
+                        next_values = (values_cpu[recurrence - 1::recurrence] -
+                                       rewards_cpu[recurrence - 1::recurrence]) / gamma
                         next_vs = next_values
 
                         with timing.add_time('vtrace'):
@@ -741,9 +769,12 @@ class LearnerWorker:
                                 curr_vtrace_rho = vtrace_rho[i::recurrence]
                                 curr_vtrace_c = vtrace_c[i::recurrence]
 
-                                delta_s = curr_vtrace_rho * (rewards + not_done_times_gamma * next_values - curr_values)
-                                adv[i::recurrence] = curr_vtrace_rho * (rewards + not_done_times_gamma * next_vs - curr_values)
-                                next_vs = curr_values + delta_s + not_done_times_gamma * curr_vtrace_c * (next_vs - next_values)
+                                delta_s = curr_vtrace_rho * (
+                                    rewards + not_done_times_gamma * next_values - curr_values)
+                                adv[i::recurrence] = curr_vtrace_rho * (
+                                    rewards + not_done_times_gamma * next_vs - curr_values)
+                                next_vs = curr_values + delta_s + not_done_times_gamma * curr_vtrace_c * (
+                                    next_vs - next_values)
                                 vs[i::recurrence] = next_vs
 
                                 next_values = curr_values
@@ -762,7 +793,8 @@ class LearnerWorker:
                 with timing.add_time('losses'):
                     policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high)
                     exploration_loss = self.exploration_loss_func(action_distribution)
-                    termination_loss = self._termination_loss_func(values, result.values, result.termination_mask[:, mb.option_idx])
+                    termination_loss = self._termination_loss_func(
+                        values, result.values, result.termination_mask[:, mb.option_idx])
                     actor_loss = policy_loss + exploration_loss + termination_loss
                     epoch_actor_losses.append(actor_loss.item())
 
@@ -774,10 +806,15 @@ class LearnerWorker:
                     loss = actor_loss + critic_loss
 
                     high_loss = 30.0
-                    if abs(to_scalar(policy_loss)) > high_loss or abs(to_scalar(value_loss)) > high_loss or abs(to_scalar(exploration_loss)) > high_loss:
+                    if abs(to_scalar(policy_loss)) > high_loss or abs(
+                            to_scalar(value_loss)) > high_loss or abs(
+                                to_scalar(exploration_loss)) > high_loss:
                         log.warning(
                             'High loss value: %.4f %.4f %.4f %.4f (recommended to adjust the --reward_scale parameter)',
-                            to_scalar(loss), to_scalar(policy_loss), to_scalar(value_loss), to_scalar(exploration_loss),
+                            to_scalar(loss),
+                            to_scalar(policy_loss),
+                            to_scalar(value_loss),
+                            to_scalar(exploration_loss),
                         )
                         force_summaries = True
 
@@ -797,9 +834,11 @@ class LearnerWorker:
 
                     if self.cfg.max_grad_norm > 0.0:
                         with timing.add_time('clip'):
-                            torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.cfg.max_grad_norm)
+                            torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
+                                                           self.cfg.max_grad_norm)
                             if self.aux_loss_module is not None:
-                                torch.nn.utils.clip_grad_norm_(self.aux_loss_module.parameters(), self.cfg.max_grad_norm)
+                                torch.nn.utils.clip_grad_norm_(self.aux_loss_module.parameters(),
+                                                               self.cfg.max_grad_norm)
 
                     curr_policy_version = self.train_step  # policy version before the weight update
                     with self.policy_lock:
@@ -828,7 +867,9 @@ class LearnerWorker:
                 early_stop = True
                 log.debug(
                     'Early stopping after %d epochs (%d sgd steps), loss delta %.7f',
-                    epoch + 1, num_sgd_steps, loss_delta_abs,
+                    epoch + 1,
+                    num_sgd_steps,
+                    loss_delta_abs,
                 )
                 break
 
@@ -844,10 +885,9 @@ class LearnerWorker:
         stats = AttrDict()
 
         grad_norm = sum(
-            p.grad.data.norm(2).item() ** 2
+            p.grad.data.norm(2).item()**2
             for p in self.actor_critic.parameters()
-            if p.grad is not None
-        ) ** 0.5
+            if p.grad is not None)**0.5
         stats.grad_norm = grad_norm
         stats.loss = var.loss
         stats.value = var.result.values.mean()
@@ -877,7 +917,8 @@ class LearnerWorker:
 
             # calculate KL-divergence with the behaviour policy action distribution
             old_action_distribution = get_action_distribution(
-                self.actor_critic.action_space, var.mb.action_logits,
+                self.actor_critic.action_space,
+                var.mb.action_logits,
             )
             kl_old = var.action_distribution.kl_divergence(old_action_distribution)
             kl_old_mean = kl_old.mean()
@@ -885,7 +926,8 @@ class LearnerWorker:
             stats.kl_divergence = kl_old_mean
             stats.value_delta = value_delta_avg
             stats.value_delta_max = value_delta_max
-            stats.fraction_clipped = ((var.ratio < var.clip_ratio_low).float() + (var.ratio > var.clip_ratio_high).float()).mean()
+            stats.fraction_clipped = ((var.ratio < var.clip_ratio_low).float() +
+                                      (var.ratio > var.clip_ratio_high).float()).mean()
             stats.ratio_mean = ratio_mean
             stats.ratio_min = ratio_min
             stats.ratio_max = ratio_max
@@ -894,7 +936,8 @@ class LearnerWorker:
         # this caused numerical issues on some versions of PyTorch with second moment reaching infinity
         adam_max_second_moment = 0.0
         for key, tensor_state in self.optimizer.state.items():
-            adam_max_second_moment = max(tensor_state['exp_avg_sq'].max().item(), adam_max_second_moment)
+            adam_max_second_moment = max(tensor_state['exp_avg_sq'].max().item(),
+                                         adam_max_second_moment)
         stats.adam_max_second_moment = adam_max_second_moment
 
         version_diff = var.curr_policy_version - var.mb.policy_version
@@ -920,13 +963,18 @@ class LearnerWorker:
             if self.new_cfg is not None:
                 for key, value in self.new_cfg.items():
                     if self.cfg[key] != value:
-                        log.debug('Learner %d replacing cfg parameter %r with new value %r', self.policy_id, key, value)
+                        log.debug('Learner %d replacing cfg parameter %r with new value %r',
+                                  self.policy_id,
+                                  key,
+                                  value)
                         self.cfg[key] = value
 
                 for param_group in self.optimizer.param_groups:
                     param_group['lr'] = self.cfg.learning_rate
                     param_group['betas'] = (self.cfg.adam_beta1, self.cfg.adam_beta2)
-                    log.debug('Updated optimizer lr to value %.7f, betas: %r', param_group['lr'], param_group['betas'])
+                    log.debug('Updated optimizer lr to value %.7f, betas: %r',
+                              param_group['lr'],
+                              param_group['betas'])
 
                 self.new_cfg = None
 
@@ -956,7 +1004,9 @@ class LearnerWorker:
         self.optimizer.load_state_dict(checkpoint_dict['optimizer'])
         if self.aux_loss_module is not None:
             self.aux_loss_module.load_state_dict(checkpoint_dict['aux_loss_module'])
-        log.info('Loaded experiment state at training iteration %d, env step %d', self.train_step, self.env_steps)
+        log.info('Loaded experiment state at training iteration %d, env step %d',
+                 self.train_step,
+                 self.env_steps)
 
     def init_model(self, timing):
         self.actor_critic = create_actor_critic(self.cfg, self.obs_space, self.action_space, timing)
@@ -1092,7 +1142,8 @@ class LearnerWorker:
             self._process_training_data(data, timing, wait_stats)
             self.num_batches_processed += 1
 
-            if time.time() - last_cache_cleanup > 300.0 or (not self.cfg.benchmark and self.num_batches_processed < 50):
+            if time.time() - last_cache_cleanup > 300.0 or (not self.cfg.benchmark and
+                                                            self.num_batches_processed < 50):
                 if self.cfg.device == 'gpu':
                     torch.cuda.empty_cache()
                     torch.cuda.ipc_collect()
@@ -1126,7 +1177,8 @@ class LearnerWorker:
         rollouts = []
         for rollout_data in data.rollouts:
             env_idx, agent_idx = rollout_data['env_idx'], rollout_data['agent_idx']
-            tensors = self.rollout_tensors.index((worker_idx, split_idx, env_idx, agent_idx, traj_buffer_idx))
+            tensors = self.rollout_tensors.index(
+                (worker_idx, split_idx, env_idx, agent_idx, traj_buffer_idx))
 
             rollout_data['t'] = tensors
             rollout_data['worker_idx'] = worker_idx
@@ -1171,7 +1223,8 @@ class LearnerWorker:
         minibatches_currently_accumulated = len(rollouts) / rollouts_per_minibatch
 
         # count minibatches ready for training
-        minibatches_currently_accumulated += self.experience_buffer_queue.qsize() * self.cfg.num_batches_per_iteration
+        minibatches_currently_accumulated += self.experience_buffer_queue.qsize(
+        ) * self.cfg.num_batches_per_iteration
 
         total_minibatches_on_learner = minibatches_currently_training + minibatches_currently_accumulated
 
@@ -1201,7 +1254,8 @@ class LearnerWorker:
         else:
             self.initialize(timing)
             log.error(
-                'train_in_background set to False on learner %d! This is slow, use only for testing!', self.policy_id,
+                'train_in_background set to False on learner %d! This is slow, use only for testing!',
+                self.policy_id,
             )
 
         while not self.terminate:
@@ -1235,7 +1289,8 @@ class LearnerWorker:
                         log.info(
                             'Learner %d accumulated too much experience, stop experience collection! '
                             'Learner is likely a bottleneck in your experiment (%d times)',
-                            self.policy_id, self.stop_experience_collection_num_msgs,
+                            self.policy_id,
+                            self.stop_experience_collection_num_msgs,
                         )
                         self.stop_experience_collection_num_msgs = 0
 

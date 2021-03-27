@@ -10,7 +10,6 @@ from algorithms.utils.pytorch_utils import calc_num_elements
 from utils.utils import AttrDict
 from utils.utils import log
 
-
 # register custom encoders
 ENCODER_REGISTRY = dict()
 
@@ -136,7 +135,12 @@ class ConvEncoder(EncoderBase):
         we devote a separate module to it to be able to use torch.jit.script (hopefully benefit from some layer
         fusion).
         """
-        def __init__(self, activation, conv_filters, fc_layer_size, encoder_extra_fc_layers, obs_shape):
+        def __init__(self,
+                     activation,
+                     conv_filters,
+                     fc_layer_size,
+                     encoder_extra_fc_layers,
+                     obs_shape):
             super(ConvEncoder.ConvEncoderImpl, self).__init__()
             conv_layers = []
             for layer in conv_filters:
@@ -185,7 +189,11 @@ class ConvEncoder(EncoderBase):
         fc_layer_size = fc_after_encoder_size(self.cfg)
         encoder_extra_fc_layers = self.cfg.encoder_extra_fc_layers
 
-        enc = self.ConvEncoderImpl(activation, conv_filters, fc_layer_size, encoder_extra_fc_layers, obs_shape)
+        enc = self.ConvEncoderImpl(activation,
+                                   conv_filters,
+                                   fc_layer_size,
+                                   encoder_extra_fc_layers,
+                                   obs_shape)
         self.enc = torch.jit.script(enc)
 
         self.encoder_out_size = calc_num_elements(self.enc, obs_shape.obs)
@@ -237,7 +245,8 @@ class ResnetEncoder(EncoderBase):
         layers = []
         for i, (out_channels, res_blocks) in enumerate(resnet_conf):
             layers.extend([
-                nn.Conv2d(curr_input_channels, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
+                nn.Conv2d(curr_input_channels, out_channels, kernel_size=3, stride=1,
+                          padding=1),  # padding SAME
                 nn.MaxPool2d(kernel_size=3, stride=2, padding=1),  # padding SAME
             ])
 
@@ -297,10 +306,12 @@ class MlpEncoder(EncoderBase):
         x = self.forward_fc_blocks(x)
         return x
 
+
 def fc_layer(in_features, out_features, bias=True, spec_norm=False):
     if spec_norm:
         return spectral_norm(nn.Linear(in_features, out_features, bias))
     return nn.Linear(in_features, out_features, bias)
+
 
 def create_encoder(cfg, obs_space, timing):
     if cfg.encoder_custom:
@@ -386,7 +397,6 @@ class PolicyCoreRNN(PolicyCoreBase):
 
 class PolicyCoreFeedForward(PolicyCoreBase):
     """A noop core (no recurrency)."""
-
     def __init__(self, cfg, input_size):
         super().__init__(cfg)
         self.cfg = cfg
@@ -416,18 +426,20 @@ class ActionParameterizationOption(ActionsParameterizationBase):
     """
     Parameterized based on options
     """
-
     def __init__(self, cfg, core_out_size, action_space):
         super().__init__(cfg, action_space)
-        
+
         self.num_action_outputs = calc_num_logits(action_space)
         self.num_options = num_options
-        self.distribution_linear = nn.Linear(core_out_size, self.num_action_outputs * cfg.num_options)
+        self.distribution_linear = nn.Linear(core_out_size,
+                                             self.num_action_outputs * cfg.num_options)
 
     def forward(self, actor_core_output, option_idx):
         """Just forward the FC layer and generate the distribution object."""
-        action_distribution_params = self.distribution_linear(actor_core_output)[option_idx].view(self.num_action_outputs, num_options)[option_idx]
-        action_distribution = get_action_distribution(self.action_space, raw_logits=action_distribution_params)
+        action_distribution_params = self.distribution_linear(actor_core_output)[option_idx].view(
+            self.num_action_outputs, num_options)[option_idx]
+        action_distribution = get_action_distribution(self.action_space,
+                                                      raw_logits=action_distribution_params)
         return action_distribution_params, action_distribution
 
 
@@ -437,7 +449,6 @@ class ActionParameterizationDefault(ActionsParameterizationBase):
     categorical action distributions, as well as continuous actions with learned state-dependent stddev.
 
     """
-
     def __init__(self, cfg, core_out_size, action_space):
         super().__init__(cfg, action_space)
 
@@ -447,13 +458,13 @@ class ActionParameterizationDefault(ActionsParameterizationBase):
     def forward(self, actor_core_output):
         """Just forward the FC layer and generate the distribution object."""
         action_distribution_params = self.distribution_linear(actor_core_output)
-        action_distribution = get_action_distribution(self.action_space, raw_logits=action_distribution_params)
+        action_distribution = get_action_distribution(self.action_space,
+                                                      raw_logits=action_distribution_params)
         return action_distribution_params, action_distribution
 
 
 class ActionParameterizationContinuousNonAdaptiveStddev(ActionsParameterizationBase):
     """Use a single learned parameter for action stddevs."""
-
     def __init__(self, cfg, core_out_size, action_space):
         super().__init__(cfg, action_space)
 
@@ -477,5 +488,6 @@ class ActionParameterizationContinuousNonAdaptiveStddev(ActionsParameterizationB
         batch_size = action_means.shape[0]
         action_stddevs = self.learned_stddev.repeat(batch_size, 1)
         action_distribution_params = torch.cat((action_means, action_stddevs), dim=1)
-        action_distribution = get_action_distribution(self.action_space, raw_logits=action_distribution_params)
+        action_distribution = get_action_distribution(self.action_space,
+                                                      raw_logits=action_distribution_params)
         return action_distribution_params, action_distribution

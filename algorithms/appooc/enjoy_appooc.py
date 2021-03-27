@@ -75,7 +75,9 @@ def enjoy(cfg, max_num_frames=1e9):
         return max_num_frames is not None and frames > max_num_frames
 
     obs = env.reset()
-    rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], dtype=torch.float32, device=device)
+    rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)],
+                             dtype=torch.float32,
+                             device=device)
     episode_reward = np.zeros(env.num_agents)
     finished_episode = [False] * env.num_agents
 
@@ -122,8 +124,15 @@ def enjoy(cfg, max_num_frames=1e9):
                         finished_episode[agent_i] = True
                         episode_rewards[agent_i].append(episode_reward[agent_i])
                         true_rewards[agent_i].append(infos[agent_i].get('true_reward', math.nan))
-                        log.info('Episode finished for agent %d at %d frames. Reward: %.3f, true_reward: %.3f', agent_i, num_frames, episode_reward[agent_i], true_rewards[agent_i][-1])
-                        rnn_states[agent_i] = torch.zeros([get_hidden_size(cfg)], dtype=torch.float32, device=device)
+                        log.info(
+                            'Episode finished for agent %d at %d frames. Reward: %.3f, true_reward: %.3f',
+                            agent_i,
+                            num_frames,
+                            episode_reward[agent_i],
+                            true_rewards[agent_i][-1])
+                        rnn_states[agent_i] = torch.zeros([get_hidden_size(cfg)],
+                                                          dtype=torch.float32,
+                                                          device=device)
                         episode_reward[agent_i] = 0
 
                 # if episode terminated synchronously for all agents, pause a bit before starting a new one
@@ -147,8 +156,12 @@ def enjoy(cfg, max_num_frames=1e9):
                                 avg_true_reward_str += ', '
                             avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
 
-                    log.info('Avg episode rewards: %s, true rewards: %s', avg_episode_rewards_str, avg_true_reward_str)
-                    log.info('Avg episode reward: %.3f, avg true_reward: %.3f', np.mean([np.mean(episode_rewards[i]) for i in range(env.num_agents)]), np.mean([np.mean(true_rewards[i]) for i in range(env.num_agents)]))
+                    log.info('Avg episode rewards: %s, true rewards: %s',
+                             avg_episode_rewards_str,
+                             avg_true_reward_str)
+                    log.info('Avg episode reward: %.3f, avg true_reward: %.3f',
+                             np.mean([np.mean(episode_rewards[i]) for i in range(env.num_agents)]),
+                             np.mean([np.mean(true_rewards[i]) for i in range(env.num_agents)]))
 
                 # VizDoom multiplayer stuff
                 # for player in [1, 2, 3, 4, 5, 6, 7, 8]:

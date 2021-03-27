@@ -10,4 +10,9 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('doom_freedm_v64_fs2', experiments=[_experiment], pause_between_experiments=100, use_gpus=1, experiments_per_gpu=-1, max_parallel=1)
+RUN_DESCRIPTION = RunDescription('doom_freedm_v64_fs2',
+                                 experiments=[_experiment],
+                                 pause_between_experiments=100,
+                                 use_gpus=1,
+                                 experiments_per_gpu=-1,
+                                 max_parallel=1)

@@ -47,7 +47,8 @@ class TestDoom(TestCase):
         log.info('Took %.3f seconds for %d steps', took, num_steps)
         log.info('Server steps per second: %.1f', num_steps / took)
         log.info('Observations fps: %.1f', num_steps * multi_env.num_agents / took)
-        log.info('Environment fps: %.1f', num_steps * multi_env.num_agents * multi_env.skip_frames / took)
+        log.info('Environment fps: %.1f',
+                 num_steps * multi_env.num_agents * multi_env.skip_frames / took)
 
         multi_env.close()
 

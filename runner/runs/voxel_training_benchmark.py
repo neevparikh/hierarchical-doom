@@ -30,5 +30,5 @@ _experiment_voxel_env = Experiment(
     _params_voxel_env.generate_params(randomize=False),
 )
 
-
-RUN_DESCRIPTION = RunDescription('voxel_train_benchmark', experiments=[_experiment_basic_envs, _experiment_voxel_env])
+RUN_DESCRIPTION = RunDescription('voxel_train_benchmark',
+                                 experiments=[_experiment_basic_envs, _experiment_voxel_env])

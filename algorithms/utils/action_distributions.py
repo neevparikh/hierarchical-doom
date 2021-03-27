@@ -16,7 +16,8 @@ def calc_num_actions(action_space):
         return len(action_space.spaces)
     elif isinstance(action_space, gym.spaces.Box):
         if len(action_space.shape) != 1:
-            raise Exception('Non-trivial shape Box action spaces not currently supported. Try to flatten it.')
+            raise Exception(
+                'Non-trivial shape Box action spaces not currently supported. Try to flatten it.')
 
         return action_space.shape[0]
     else:
@@ -92,7 +93,8 @@ class CategoricalActionDistribution:
         return self.log_p
 
     def sample_gumbel(self):
-        sample = torch.argmax(self.raw_logits - torch.empty_like(self.raw_logits).exponential_().log_(), -1)
+        sample = torch.argmax(
+            self.raw_logits - torch.empty_like(self.raw_logits).exponential_().log_(), -1)
         return sample
 
     def sample(self):
@@ -129,8 +131,8 @@ class CategoricalActionDistribution:
         uniform_prob = 1 / num_categories
         log_uniform_prob = math.log(uniform_prob)
 
-        return 0.5 * ((probs * (log_probs - log_uniform_prob)).sum(dim=-1)
-                      + (uniform_prob * (log_uniform_prob - log_probs)).sum(dim=-1))
+        return 0.5 * ((probs * (log_probs - log_uniform_prob)).sum(dim=-1) +
+                      (uniform_prob * (log_uniform_prob - log_probs)).sum(dim=-1))
 
     def kl_divergence(self, other):
         return self._kl(other.log_probs)
@@ -218,9 +220,8 @@ class TupleActionDistribution:
 
     def kl_divergence(self, other):
         kls = [
-            d.kl_divergence(other_d).unsqueeze(dim=1)
-            for d, other_d
-            in zip(self.distributions, other.distributions)
+            d.kl_divergence(other_d).unsqueeze(dim=1) for d,
+            other_d in zip(self.distributions, other.distributions)
         ]
 
         kls = torch.cat(kls, dim=1)
@@ -263,11 +264,9 @@ class ContinuousActionDistribution(Independent):
             action_mean=self.means.mean(),
             action_mean_min=self.means.min(),
             action_mean_max=self.means.max(),
-
             action_log_std_mean=self.log_std.mean(),
             action_log_std_min=self.log_std.min(),
             action_log_std_max=self.log_std.max(),
-
             action_stddev_mean=self.stddev.mean(),
             action_stddev_min=self.stddev.min(),
             action_stddev_max=self.stddev.max(),

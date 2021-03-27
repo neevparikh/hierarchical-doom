@@ -17,16 +17,22 @@ from envs.env_wrappers import ResizeWrapper, RewardScalingWrapper, TimeLimitWrap
     PixelFormatChwWrapper
 from utils.utils import log
 
-
 VIZDOOM_INITIALIZED = False
 
 
 class DoomSpec:
     def __init__(
-            self, name, env_spec_file, action_space, reward_scaling=1.0, default_timeout=-1,
-            num_agents=1, num_bots=0,
-            respawn_delay=0, timelimit=4.0,
-            extra_wrappers=None,
+        self,
+        name,
+        env_spec_file,
+        action_space,
+        reward_scaling=1.0,
+        default_timeout=-1,
+        num_agents=1,
+        num_bots=0,
+        respawn_delay=0,
+        timelimit=4.0,
+        extra_wrappers=None,
     ):
         self.name = name
         self.env_spec_file = env_spec_file
@@ -48,35 +54,53 @@ class DoomSpec:
 
 
 ADDITIONAL_INPUT = (DoomAdditionalInput, {})  # health, ammo, etc. as input vector
-BATTLE_REWARD_SHAPING = (DoomRewardShapingWrapper, dict(reward_shaping_scheme=REWARD_SHAPING_BATTLE, true_reward_func=None))  # "true" reward None means just the env reward (monster kills)
-BOTS_REWARD_SHAPING = (DoomRewardShapingWrapper, dict(reward_shaping_scheme=REWARD_SHAPING_DEATHMATCH_V0, true_reward_func=true_reward_frags))
-DEATHMATCH_REWARD_SHAPING = (DoomRewardShapingWrapper, dict(reward_shaping_scheme=REWARD_SHAPING_DEATHMATCH_V1, true_reward_func=true_reward_final_position))
-
+BATTLE_REWARD_SHAPING = (DoomRewardShapingWrapper,
+                         dict(reward_shaping_scheme=REWARD_SHAPING_BATTLE, true_reward_func=None)
+                        )  # "true" reward None means just the env reward (monster kills)
+BOTS_REWARD_SHAPING = (DoomRewardShapingWrapper,
+                       dict(reward_shaping_scheme=REWARD_SHAPING_DEATHMATCH_V0,
+                            true_reward_func=true_reward_frags))
+DEATHMATCH_REWARD_SHAPING = (DoomRewardShapingWrapper,
+                             dict(reward_shaping_scheme=REWARD_SHAPING_DEATHMATCH_V1,
+                                  true_reward_func=true_reward_final_position))
 
 DOOM_ENVS = [
     DoomSpec(
-        'doom_basic', 'basic.cfg',
+        'doom_basic',
+        'basic.cfg',
         Discrete(1 + 3),  # idle, left, right, attack
-        0.01, 300,
+        0.01,
+        300,
     ),
-
     DoomSpec(
-        'doom_two_colors_easy', 'two_colors_easy.cfg', doom_action_space_basic(),
-        extra_wrappers=[(DoomGatheringRewardShaping, {})],  # same as https://arxiv.org/pdf/1904.01806.pdf
+        'doom_two_colors_easy',
+        'two_colors_easy.cfg',
+        doom_action_space_basic(),
+        extra_wrappers=[(DoomGatheringRewardShaping, {})
+                       ],  # same as https://arxiv.org/pdf/1904.01806.pdf
     ),
-
     DoomSpec(
-        'doom_two_colors_hard', 'two_colors_hard.cfg', doom_action_space_basic(),
+        'doom_two_colors_hard',
+        'two_colors_hard.cfg',
+        doom_action_space_basic(),
         extra_wrappers=[(DoomGatheringRewardShaping, {})],
     ),
-
     DoomSpec(
-        'doom_dm', 'cig.cfg', doom_action_space(), 1.0, int(1e9), num_agents=8,
+        'doom_dm',
+        'cig.cfg',
+        doom_action_space(),
+        1.0,
+        int(1e9),
+        num_agents=8,
         extra_wrappers=[ADDITIONAL_INPUT, DEATHMATCH_REWARD_SHAPING],
     ),
-
     DoomSpec(
-        'doom_dwango5', 'dwango5_dm.cfg', doom_action_space(), 1.0, int(1e9), num_agents=8,
+        'doom_dwango5',
+        'dwango5_dm.cfg',
+        doom_action_space(),
+        1.0,
+        int(1e9),
+        num_agents=8,
         extra_wrappers=[ADDITIONAL_INPUT, DEATHMATCH_REWARD_SHAPING],
     ),
 
@@ -87,68 +111,89 @@ DOOM_ENVS = [
     DoomSpec('doom_defend_the_center_flat_actions', 'defend_the_center.cfg', Discrete(1 + 3), 1.0),
 
     # "basic" single-player envs
-
     DoomSpec('doom_my_way_home', 'my_way_home.cfg', doom_action_space_basic(), 1.0),
     DoomSpec('doom_deadly_corridor', 'deadly_corridor.cfg', doom_action_space_extended(), 0.01),
     DoomSpec('doom_defend_the_center', 'defend_the_center.cfg', doom_turn_and_attack_only(), 1.0),
     DoomSpec('doom_defend_the_line', 'defend_the_line.cfg', doom_turn_and_attack_only(), 1.0),
     DoomSpec(
-        'doom_health_gathering', 'health_gathering.cfg', Discrete(1 + 4), 1.0,
-        extra_wrappers=[(DoomGatheringRewardShaping, {})],  # same as https://arxiv.org/pdf/1904.01806.pdf
+        'doom_health_gathering',
+        'health_gathering.cfg',
+        Discrete(1 + 4),
+        1.0,
+        extra_wrappers=[(DoomGatheringRewardShaping, {})
+                       ],  # same as https://arxiv.org/pdf/1904.01806.pdf
     ),
     DoomSpec(
-        'doom_health_gathering_supreme', 'health_gathering_supreme.cfg', Discrete(1 + 4), 1.0,
-        extra_wrappers=[(DoomGatheringRewardShaping, {})],  # same as https://arxiv.org/pdf/1904.01806.pdf
+        'doom_health_gathering_supreme',
+        'health_gathering_supreme.cfg',
+        Discrete(1 + 4),
+        1.0,
+        extra_wrappers=[(DoomGatheringRewardShaping, {})
+                       ],  # same as https://arxiv.org/pdf/1904.01806.pdf
     ),
 
     # "challenging" single-player envs
     DoomSpec(
-        'doom_battle', 'battle_continuous_turning.cfg', doom_action_space_discretized_no_weap(), 1.0, 2100,
+        'doom_battle',
+        'battle_continuous_turning.cfg',
+        doom_action_space_discretized_no_weap(),
+        1.0,
+        2100,
         extra_wrappers=[ADDITIONAL_INPUT, BATTLE_REWARD_SHAPING],
     ),
-
     DoomSpec(
-        'doom_battle2', 'battle2_continuous_turning.cfg', doom_action_space_discretized_no_weap(), 1.0, 2100,
+        'doom_battle2',
+        'battle2_continuous_turning.cfg',
+        doom_action_space_discretized_no_weap(),
+        1.0,
+        2100,
         extra_wrappers=[ADDITIONAL_INPUT, BATTLE_REWARD_SHAPING],
     ),
 
     # multi-player envs with bots as opponents (still only one agent)
-
     DoomSpec(
         'doom_duel_bots',
         'ssl2.cfg',
         doom_action_space_full_discretized(with_use=True),
-        1.0, int(1e9),
-        num_agents=1, num_bots=1, respawn_delay=2,
+        1.0,
+        int(1e9),
+        num_agents=1,
+        num_bots=1,
+        respawn_delay=2,
         extra_wrappers=[ADDITIONAL_INPUT, BOTS_REWARD_SHAPING],
     ),
-
     DoomSpec(
         'doom_deathmatch_bots',
         'dwango5_dm_continuous_weap.cfg',
         doom_action_space_full_discretized(),
-        1.0, int(1e9),
-        num_agents=1, num_bots=7,
+        1.0,
+        int(1e9),
+        num_agents=1,
+        num_bots=7,
         extra_wrappers=[ADDITIONAL_INPUT, BOTS_REWARD_SHAPING],
     ),
 
     # full multiplayer environments for self-play and PBT experiments
-
     DoomSpec(
         'doom_duel',
         'ssl2.cfg',
         doom_action_space_full_discretized(with_use=True),
-        1.0, int(1e9),
-        num_agents=2, num_bots=0, respawn_delay=2,
+        1.0,
+        int(1e9),
+        num_agents=2,
+        num_bots=0,
+        respawn_delay=2,
         extra_wrappers=[ADDITIONAL_INPUT, DEATHMATCH_REWARD_SHAPING],
     ),
-
     DoomSpec(
         'doom_deathmatch_full',
         'freedm.cfg',
         doom_action_space_full_discretized(with_use=True),
-        1.0, int(1e9),
-        num_agents=4, num_bots=4, respawn_delay=2,
+        1.0,
+        int(1e9),
+        num_agents=4,
+        num_bots=4,
+        respawn_delay=2,
         extra_wrappers=[ADDITIONAL_INPUT, DEATHMATCH_REWARD_SHAPING],
     ),
 
@@ -169,14 +214,17 @@ def doom_env_by_name(name):
 
 # noinspection PyUnusedLocal
 def make_doom_env_impl(
-        doom_spec,
-        cfg=None,
-        env_config=None,
-        skip_frames=None,
-        episode_horizon=None,
-        player_id=None, num_agents=None, max_num_players=None, num_bots=0,  # for multi-agent
-        custom_resolution=None,
-        **kwargs,
+    doom_spec,
+    cfg=None,
+    env_config=None,
+    skip_frames=None,
+    episode_horizon=None,
+    player_id=None,
+    num_agents=None,
+    max_num_players=None,
+    num_bots=0,  # for multi-agent
+    custom_resolution=None,
+    **kwargs,
 ):
     skip_frames = skip_frames if skip_frames is not None else cfg.env_frameskip
 
@@ -185,15 +233,22 @@ def make_doom_env_impl(
 
     if player_id is None:
         env = VizdoomEnv(
-            doom_spec.action_space, doom_spec.env_spec_file, skip_frames=skip_frames, async_mode=async_mode,
+            doom_spec.action_space,
+            doom_spec.env_spec_file,
+            skip_frames=skip_frames,
+            async_mode=async_mode,
         )
     else:
         timelimit = cfg.timelimit if cfg.timelimit is not None else doom_spec.timelimit
 
         from envs.doom.multiplayer.doom_multiagent import VizdoomEnvMultiplayer
         env = VizdoomEnvMultiplayer(
-            doom_spec.action_space, doom_spec.env_spec_file,
-            player_id=player_id, num_agents=num_agents, max_num_players=max_num_players, num_bots=num_bots,
+            doom_spec.action_space,
+            doom_spec.env_spec_file,
+            player_id=player_id,
+            num_agents=num_agents,
+            max_num_players=max_num_players,
+            num_bots=num_bots,
             skip_frames=skip_frames,
             async_mode=async_mode,
             respawn_delay=doom_spec.respawn_delay,
@@ -204,7 +259,8 @@ def make_doom_env_impl(
     should_record = False
     if env_config is None:
         should_record = True
-    elif env_config.worker_index == 0 and env_config.vector_index == 0 and (player_id is None or player_id == 0):
+    elif env_config.worker_index == 0 and env_config.vector_index == 0 and (player_id is None or
+                                                                            player_id == 0):
         should_record = True
 
     if record_to is not None and should_record:
@@ -267,8 +323,12 @@ def make_doom_multiplayer_env(doom_spec, cfg=None, env_config=None, **kwargs):
         return make_doom_env_impl(
             doom_spec,
             cfg=cfg,
-            player_id=player_id, num_agents=num_agents, max_num_players=max_num_players, num_bots=num_bots,
-            skip_frames=1 if is_multiagent else skip_frames,  # multi-agent skipped frames are handled by the wrapper
+            player_id=player_id,
+            num_agents=num_agents,
+            max_num_players=max_num_players,
+            num_bots=num_bots,
+            skip_frames=1 if is_multiagent else
+            skip_frames,  # multi-agent skipped frames are handled by the wrapper
             env_config=env_config,
             **kwargs,
         )

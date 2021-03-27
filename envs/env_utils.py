@@ -121,6 +121,3 @@ def set_training_info(training_info_interface, approx_total_training_steps: int)
     if training_info_interface:
         training_info_dict = dict(approx_total_training_steps=approx_total_training_steps)
         training_info_interface.set_training_info(training_info_dict)
-
-
-

@@ -4,7 +4,6 @@ This isn't production code, but feel free to use as an example for your SLURM se
 
 """
 
-
 import os
 import time
 from os.path import join
@@ -13,19 +12,29 @@ from subprocess import Popen, PIPE
 from utils.utils import log, str2bool
 
 # TODO: this is not portable, a hack
-SBATCH_TEMPLATE = (
-    '#!/bin/bash\n'
-    'source /homes/petrenko/miniconda3/etc/profile.d/conda.sh\n'
-    'conda activate sample-factory\n'
-    'cd ~/sample-factory\n'
-)
+SBATCH_TEMPLATE = ('#!/bin/bash\n'
+                   'source /homes/petrenko/miniconda3/etc/profile.d/conda.sh\n'
+                   'conda activate sample-factory\n'
+                   'cd ~/sample-factory\n')
 
 
 def add_slurm_args(parser):
-    parser.add_argument('--slurm_gpus_per_job', default=1, type=int, help='GPUs in a single SLURM process')
-    parser.add_argument('--slurm_cpus_per_gpu', default=14, type=int, help='Max allowed number of CPU cores per allocated GPU')
-    parser.add_argument('--slurm_print_only', default=False, type=str2bool, help='Just print commands to the console without executing')
-    parser.add_argument('--slurm_workdir', default=None, type=str, help='Optional workdir. Used by slurm runner to store logfiles etc.')
+    parser.add_argument('--slurm_gpus_per_job',
+                        default=1,
+                        type=int,
+                        help='GPUs in a single SLURM process')
+    parser.add_argument('--slurm_cpus_per_gpu',
+                        default=14,
+                        type=int,
+                        help='Max allowed number of CPU cores per allocated GPU')
+    parser.add_argument('--slurm_print_only',
+                        default=False,
+                        type=str2bool,
+                        help='Just print commands to the console without executing')
+    parser.add_argument('--slurm_workdir',
+                        default=None,
+                        type=str,
+                        help='Optional workdir. Used by slurm runner to store logfiles etc.')
     return parser
 
 

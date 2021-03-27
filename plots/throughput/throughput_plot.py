@@ -16,12 +16,48 @@ system_2_xticks = [0, 500, 1000, 1500, 2000]
 system_2_xmax = 2000
 
 measurements = {
-    'system_1_atari': dict(filename='10_core_atari.csv', x_ticks=system_1_xticks,y_ticks=[10000, 20000, 30000, 40000, 50000], x_max=system_1_xmax, y_max=51000,y_label=False),
-    'system_1_doom': dict(filename='10_core_vizdoom.csv', x_ticks=system_1_xticks, y_ticks=[10000, 20000, 30000, 40000, 50000, 60000], x_max=system_1_xmax, y_max=61000, y_label=False),
-    'system_1_dmlab': dict(filename='10_core_dmlab.csv', x_ticks=system_1_xticks, y_ticks=[2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000], x_max=system_1_xmax, y_max=16000, y_label=False),
-    'system_2_atari': dict(filename='36_core_atari.csv', x_ticks=system_2_xticks,y_ticks=[20000, 40000, 60000, 80000, 100000, 120000, 140000], x_max=system_2_xmax,y_max=143000, y_label=False),
-    'system_2_doom': dict(filename='36_core_vizdoom.csv', x_ticks=system_2_xticks, y_ticks=[20000, 40000, 60000, 80000, 100000, 120000, 140000], x_max=system_2_xmax, y_max=150000, y_label=False),
-    'system_2_dmlab': dict(filename='36_core_dmlab.csv', x_ticks=system_2_xticks, y_ticks=[10000, 20000, 30000, 40000, 50000], x_max=system_2_xmax, y_max=50000, y_label=False),
+    'system_1_atari':
+        dict(filename='10_core_atari.csv',
+             x_ticks=system_1_xticks,
+             y_ticks=[10000, 20000, 30000, 40000, 50000],
+             x_max=system_1_xmax,
+             y_max=51000,
+             y_label=False),
+    'system_1_doom':
+        dict(filename='10_core_vizdoom.csv',
+             x_ticks=system_1_xticks,
+             y_ticks=[10000, 20000, 30000, 40000, 50000, 60000],
+             x_max=system_1_xmax,
+             y_max=61000,
+             y_label=False),
+    'system_1_dmlab':
+        dict(filename='10_core_dmlab.csv',
+             x_ticks=system_1_xticks,
+             y_ticks=[2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000],
+             x_max=system_1_xmax,
+             y_max=16000,
+             y_label=False),
+    'system_2_atari':
+        dict(filename='36_core_atari.csv',
+             x_ticks=system_2_xticks,
+             y_ticks=[20000, 40000, 60000, 80000, 100000, 120000, 140000],
+             x_max=system_2_xmax,
+             y_max=143000,
+             y_label=False),
+    'system_2_doom':
+        dict(filename='36_core_vizdoom.csv',
+             x_ticks=system_2_xticks,
+             y_ticks=[20000, 40000, 60000, 80000, 100000, 120000, 140000],
+             x_max=system_2_xmax,
+             y_max=150000,
+             y_label=False),
+    'system_2_dmlab':
+        dict(filename='36_core_dmlab.csv',
+             x_ticks=system_2_xticks,
+             y_ticks=[10000, 20000, 30000, 40000, 50000],
+             x_max=system_2_xmax,
+             y_max=50000,
+             y_label=False),
 }
 
 titles = {
@@ -35,7 +71,8 @@ titles = {
 
 set_matplotlib_params()
 
-plt.rcParams['figure.figsize'] = (10.0, 4.0) #(2.5, 2.0) 7.5， 4
+plt.rcParams['figure.figsize'] = (10.0, 4.0)  #(2.5, 2.0) 7.5， 4
+
 
 def build_plot(name, measurement, ax, count):
     # data = pd.read_csv(join('data', measurement['filename']))
@@ -83,7 +120,7 @@ def build_plot(name, measurement, ax, count):
     if count >= 3:
         ax.set_xlabel('Num. environments', fontsize=8)
 
-    if count %3 == 0:
+    if count % 3 == 0:
         ax.set_ylabel('FPS, frameskip = 4', fontsize=8)
 
     # for spine in ax.spines.values():
@@ -142,7 +179,6 @@ def build_plot(name, measurement, ax, count):
     # rlpyt
     rlpyt_plot, = ax.plot(x, rlpyt_y, color=DARK_GREY, label='rlpyt PPO', marker="o", markersize=marker_size, linewidth=lw)
 
-
     # plot legend
     # sa_legend = plt.legend([sf_plot, rlpyt_plot, (rllib_p1, rllib_p2), (sa_p1, sa_p2)],
     #                        ['SampleFactory', 'rlpyt', 'rllib', 'IMPALA'], numpoints=1,
@@ -170,7 +206,12 @@ def main():
     handles, labels = ax[-1].get_legend_handles_labels()
     # fig.legend(handles, labels, loc='upper center')
     # lgd = fig.legend(handles, labels, bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', ncol=4, mode="expand")
-    lgd = fig.legend(handles, labels, bbox_to_anchor=(0.05, 0.88, 0.9, 0.5), loc='lower left', ncol=5, mode="expand")
+    lgd = fig.legend(handles,
+                     labels,
+                     bbox_to_anchor=(0.05, 0.88, 0.9, 0.5),
+                     loc='lower left',
+                     ncol=5,
+                     mode="expand")
     lgd.set_in_layout(True)
 
     # plt.show()
@@ -185,7 +226,9 @@ def main():
 
     plot_dir = ensure_dir_exists(os.path.join(os.getcwd(), '../final_plots'))
 
-    plt.savefig(os.path.join(plot_dir, f'../final_plots/{plot_name}.pdf'), format='pdf', bbox_extra_artists=(lgd,))
+    plt.savefig(os.path.join(plot_dir, f'../final_plots/{plot_name}.pdf'),
+                format='pdf',
+                bbox_extra_artists=(lgd,))
     # plt.savefig(os.path.join(os.getcwd(), f'../final_plots/{plot_name}.pdf'), format='pdf', bbox_inches='tight', pad_inches=0, bbox_extra_artists=(lgd,))
 
 

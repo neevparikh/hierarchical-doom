@@ -23,8 +23,7 @@ from tensorflow.core.util.event_pb2 import Event
 
 set_matplotlib_params()
 
-plt.rcParams['figure.figsize'] = (1.5*8.20, 2) #(2.5, 2.0) 7.5， 4
-
+plt.rcParams['figure.figsize'] = (1.5 * 8.20, 2)  #(2.5, 2.0) 7.5， 4
 
 ENVS_LIST = [
     ('doom_my_way_home', None),
@@ -61,24 +60,36 @@ def extract(experiments):
     # scalar_accumulators = [EventAccumulator(str(dpath / dname / subpath)).Reload().scalars
     #                        for dname in os.listdir(dpath) if dname != FOLDER_NAME and dname in hide_file]
 
-    scalar_accumulators = [EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments]
+    scalar_accumulators = [
+        EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments
+    ]
 
     # Filter non event files
-    scalar_accumulators = [scalar_accumulator for scalar_accumulator in scalar_accumulators if scalar_accumulator.Keys()]
+    scalar_accumulators = [
+        scalar_accumulator for scalar_accumulator in scalar_accumulators
+        if scalar_accumulator.Keys()
+    ]
 
     # Get and validate all scalar keys
     # zhehui sorted(scalar_accumulator.Keys())
-    all_keys = [tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators]
+    all_keys = [
+        tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators
+    ]
     assert len(set(all_keys)) == 1, "All runs need to have the same scalar keys. There are mismatches in {}".format(all_keys)
     keys = all_keys[0]
 
-    all_scalar_events_per_key = [[scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators] for key in keys]
+    all_scalar_events_per_key = [[
+        scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators
+    ] for key in keys]
 
     # Get and validate all steps per key
     # sorted(all_scalar_events) sorted(scalar_events)
-    x_per_key = [[tuple(scalar_event.step for scalar_event in sorted(scalar_events)) for scalar_events in sorted(all_scalar_events)]
-                         for all_scalar_events in all_scalar_events_per_key]
-
+    x_per_key = [[
+        tuple(scalar_event.step
+              for scalar_event in sorted(scalar_events))
+        for scalar_events in sorted(all_scalar_events)
+    ]
+                 for all_scalar_events in all_scalar_events_per_key]
 
     # zhehui
     # import linear interpolation
@@ -86,7 +97,11 @@ def extract(experiments):
 
     # modify_all_steps_per_key = tuple(int(step_id*1e6) for step_id in range(1, int(1e8/1e6 + 1)))
     plot_step = int(2.5e6)
-    all_steps_per_key = [[tuple(int(step_id) for step_id in range(0, int(5e8), plot_step)) for scalar_events in sorted(all_scalar_events)]
+    all_steps_per_key = [[
+        tuple(int(step_id)
+              for step_id in range(0, int(5e8), plot_step))
+        for scalar_events in sorted(all_scalar_events)
+    ]
                          for all_scalar_events in all_scalar_events_per_key]
 
     for i, all_steps in enumerate(all_steps_per_key):
@@ -100,7 +115,9 @@ def extract(experiments):
     #                       for all_scalar_events in all_scalar_events_per_key]
 
     # Get values per step per key
-    values_per_key = [[[scalar_event.value for scalar_event in scalar_events] for scalar_events in all_scalar_events]
+    values_per_key = [[[scalar_event.value
+                        for scalar_event in scalar_events]
+                       for scalar_events in all_scalar_events]
                       for all_scalar_events in all_scalar_events_per_key]
 
     true_reward_key = '0_aux/avg_true_reward'
@@ -146,7 +163,10 @@ def aggregate_to_summary(dpath, aggregation_ops, extracts_per_subpath):
     for op in aggregation_ops:
         for subpath, all_per_key in extracts_per_subpath.items():
             path = dpath / FOLDER_NAME / op.__name__ / dpath.name / subpath
-            aggregations_per_key = {key: (steps, wall_times, op(values, axis=0)) for key, (steps, wall_times, values) in all_per_key.items()}
+            aggregations_per_key = {
+                key: (steps, wall_times, op(values, axis=0))
+                for key, (steps, wall_times, values) in all_per_key.items()
+            }
             write_summary(path, aggregations_per_key)
 
 
@@ -167,7 +187,7 @@ def aggregate_to_csv(dpath, aggregation_ops, extracts_per_subpath):
         for key, (steps, values) in all_per_key.items():
             # aggregations = [op(values, axis=0) for op in aggregation_ops]
             aggregations = [value for value in values]
-            write_csv(dpath, subpath, key, dpath.name, aggregations, steps, [1,2,3])
+            write_csv(dpath, subpath, key, dpath.name, aggregations, steps, [1, 2, 3])
 
     # for subpath, all_per_key in extracts_per_subpath.items():
     #     for key, (steps, wall_times, values) in all_per_key.items():
@@ -245,7 +265,6 @@ def plot(env, key, interpolated_key, ax, count):
         else:
             return '%d' % int(x)
 
-
     mkformatter = matplotlib.ticker.FuncFormatter(mkfunc)
     ax.xaxis.set_major_formatter(mkformatter)
 
@@ -275,7 +294,8 @@ def plot(env, key, interpolated_key, ax, count):
     ax.set_xlim(xmin=-x_delta, xmax=x[-1] + x_delta)
 
     y_delta = 0.06 * max(np.max(y_mean), BASELINES[env])
-    ax.set_ylim(ymin=min(np.min(y_mean) - y_delta, 0.0), ymax=max(np.max(y_plus_std), BASELINES[env]) + y_delta)
+    ax.set_ylim(ymin=min(np.min(y_mean) - y_delta, 0.0),
+                ymax=max(np.max(y_plus_std), BASELINES[env]) + y_delta)
     # plt.grid(False)
 
     # plt.ticklabel_format(style='sci', axis='x', scilimits=(8, 8))
@@ -286,12 +306,23 @@ def plot(env, key, interpolated_key, ax, count):
     lw_baseline = 0.7
 
     sf_plot, = ax.plot(x, y_mean, color=BLUE, label='SampleFactory', linewidth=lw, antialiased=True)
-    ax.fill_between(x, y_minus_std, y_plus_std, color=BLUE, alpha=0.25, antialiased=True, linewidth=0.0)
+    ax.fill_between(x,
+                    y_minus_std,
+                    y_plus_std,
+                    color=BLUE,
+                    alpha=0.25,
+                    antialiased=True,
+                    linewidth=0.0)
 
     baseline_y = BASELINES[env]
     if baseline_y is not None:
         baseline_name = 'A2C'
-        ax.plot([x[0], x[-1]], [baseline_y, baseline_y], color=GREEN, label=baseline_name, linewidth=lw_baseline, antialiased=True, linestyle='--')
+        ax.plot([x[0], x[-1]], [baseline_y, baseline_y],
+                color=GREEN,
+                label=baseline_name,
+                linewidth=lw_baseline,
+                antialiased=True,
+                linestyle='--')
 
     ax.legend(prop={'size': 6}, loc='lower right')
 
@@ -311,9 +342,19 @@ def main():
         return p_list
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, help='main path for tensorboard files', default=os.getcwd())
-    parser.add_argument('--subpaths', type=param_list, help='subpath sturctures', default=['test', 'train'])
-    parser.add_argument('--output', type=str, help='aggregation can be saves as tensorboard file (summary) or as table (csv)', default='csv')
+    parser.add_argument('--path',
+                        type=str,
+                        help='main path for tensorboard files',
+                        default=os.getcwd())
+    parser.add_argument('--subpaths',
+                        type=param_list,
+                        help='subpath sturctures',
+                        default=['test', 'train'])
+    parser.add_argument(
+        '--output',
+        type=str,
+        help='aggregation can be saves as tensorboard file (summary) or as table (csv)',
+        default='csv')
 
     args = parser.parse_args()
 
@@ -342,7 +383,8 @@ def main():
             if env not in experiments_by_env:
                 experiments_by_env[env] = []
 
-            if env in experiment_dir and (does_not_contain is None or does_not_contain not in experiment_dir):
+            if env in experiment_dir and (does_not_contain is None or
+                                          does_not_contain not in experiment_dir):
                 experiments_by_env[env].append(experiment_dir)
 
     for env, experiments in experiments_by_env.items():
@@ -373,7 +415,10 @@ def main():
 
     plt.margins(0, 0)
     plot_name = f'six_final_plots'
-    plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_inches='tight', pad_inches=0)
+    plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'),
+                format='pdf',
+                bbox_inches='tight',
+                pad_inches=0)
 
     return 0
 

@@ -23,14 +23,14 @@ class TestExample(TestCase):
     Run this test separately from other tests.
 
     """
-
     def test_example(self):
         experiment_name = 'test_example'
 
         register_custom_components()
 
         # test training for a few thousand frames
-        cfg = custom_parse_args(argv=['--algo=APPO', '--env=my_custom_env_v1', f'--experiment={experiment_name}'])
+        cfg = custom_parse_args(
+            argv=['--algo=APPO', '--env=my_custom_env_v1', f'--experiment={experiment_name}'])
         cfg.num_workers = 2
         cfg.train_for_env_steps = 100000
         cfg.save_every_sec = 1

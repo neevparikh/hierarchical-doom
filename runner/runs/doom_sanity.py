@@ -12,5 +12,9 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('doom_sanity_v44', experiments=[_experiment], pause_between_experiments=5, use_gpus=1, experiments_per_gpu=1, max_parallel=1)
-
+RUN_DESCRIPTION = RunDescription('doom_sanity_v44',
+                                 experiments=[_experiment],
+                                 pause_between_experiments=5,
+                                 use_gpus=1,
+                                 experiments_per_gpu=1,
+                                 max_parallel=1)

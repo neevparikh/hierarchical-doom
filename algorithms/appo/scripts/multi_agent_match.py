@@ -28,8 +28,20 @@ class Rival:
 
 
 RIVALS = [
-    Rival(name='duel', args=['--env=doom_duel', '--algo=APPO', '--experiment=00_bots_ssl2_fs2_ppo_1', '--experiments_root=paper_doom_duel_v65_fs2/bots_ssl2_fs2']),
-    Rival(name='duel_bots', args=['--env=doom_duel_bots', '--algo=APPO', '--experiment=00_bots_ssl2_fs2_ppo_1', '--experiments_root=paper_doom_duel_bots_v65_fs2/bots_ssl2_fs2']),
+    Rival(name='duel',
+          args=[
+              '--env=doom_duel',
+              '--algo=APPO',
+              '--experiment=00_bots_ssl2_fs2_ppo_1',
+              '--experiments_root=paper_doom_duel_v65_fs2/bots_ssl2_fs2'
+          ]),
+    Rival(name='duel_bots',
+          args=[
+              '--env=doom_duel_bots',
+              '--algo=APPO',
+              '--experiment=00_bots_ssl2_fs2_ppo_1',
+              '--experiments_root=paper_doom_duel_bots_v65_fs2/bots_ssl2_fs2'
+          ]),
 ]
 
 ENV_NAME = 'doom_duel'
@@ -43,7 +55,8 @@ def multi_agent_match(policy_indices, max_num_episodes=int(1e9), max_num_frames=
         rival.policy_index = policy_indices[i]
 
     curr_dir = os.path.dirname(os.path.abspath(__file__))
-    evaluation_filename = join(curr_dir, f'eval_{"vs".join([str(pi) for pi in policy_indices])}.txt')
+    evaluation_filename = join(curr_dir,
+                               f'eval_{"vs".join([str(pi) for pi in policy_indices])}.txt')
     with open(evaluation_filename, 'w') as fobj:
         fobj.write('start\n')
 
@@ -77,7 +90,8 @@ def multi_agent_match(policy_indices, max_num_episodes=int(1e9), max_num_frames=
         rival.actor_critic.model_to_device(device)
 
         policy_id = rival.policy_index
-        checkpoints = LearnerWorker.get_checkpoints(LearnerWorker.checkpoint_dir(rival.cfg, policy_id))
+        checkpoints = LearnerWorker.get_checkpoints(
+            LearnerWorker.checkpoint_dir(rival.cfg, policy_id))
         checkpoint_dict = LearnerWorker.load_checkpoint(checkpoints, device)
         rival.actor_critic.load_state_dict(checkpoint_dict['model'])
 
@@ -100,7 +114,9 @@ def multi_agent_match(policy_indices, max_num_episodes=int(1e9), max_num_frames=
 
             done = [False] * len(obs)
             for rival in RIVALS:
-                rival.rnn_states = torch.zeros([1, rival.cfg.hidden_size], dtype=torch.float32, device=device)
+                rival.rnn_states = torch.zeros([1, rival.cfg.hidden_size],
+                                               dtype=torch.float32,
+                                               device=device)
 
             episode_reward = 0
             prev_frame = time.time()
@@ -109,7 +125,8 @@ def multi_agent_match(policy_indices, max_num_episodes=int(1e9), max_num_frames=
                 actions = []
                 for i, obs_dict in enumerate(obs):
                     for key, x in obs_dict.items():
-                        obs_dict_torch[key] = torch.from_numpy(x).to(device).float().view(1, *x.shape)
+                        obs_dict_torch[key] = torch.from_numpy(x).to(device).float().view(
+                            1, *x.shape)
 
                     rival = RIVALS[i]
                     policy_outputs = rival.actor_critic(obs_dict_torch, rival.rnn_states)
@@ -172,7 +189,10 @@ def multi_agent_match(policy_indices, max_num_episodes=int(1e9), max_num_frames=
             last_episodes = episode_rewards[-100:]
             avg_reward = sum(last_episodes) / len(last_episodes)
             log.info(
-                'Episode reward: %f, avg reward for %d episodes: %f', episode_reward, len(last_episodes), avg_reward,
+                'Episode reward: %f, avg reward for %d episodes: %f',
+                episode_reward,
+                len(last_episodes),
+                avg_reward,
             )
 
             if max_frames_reached(num_frames):

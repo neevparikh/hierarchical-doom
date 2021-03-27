@@ -11,6 +11,7 @@ DOOM_LOCK_PATH = '/tmp/doom_rllib_lock'
 def register_doom_envs_rllib(**kwargs):
     """Register env factories in RLLib system."""
     for spec in DOOM_ENVS:
+
         def make_env_func(env_config):
             print('Creating env!!!')
             cfg = default_cfg(env=spec.name)
@@ -39,7 +40,8 @@ def register_doom_envs_rllib(**kwargs):
                         print('Env reset completed! Config:', env_config)
                         break
                 except Timeout:
-                    print('Another instance of this application currently holds the lock, attempt:', attempt)
+                    print('Another instance of this application currently holds the lock, attempt:',
+                          attempt)
 
             return env
 
@@ -48,6 +50,7 @@ def register_doom_envs_rllib(**kwargs):
 
 def register_dmlab_envs_rllib(**kwargs):
     for spec in DMLAB_ENVS:
+
         def make_env_func(env_config):
             print('Creating env!!!')
             cfg = default_cfg(env=spec.name)

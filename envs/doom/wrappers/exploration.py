@@ -25,7 +25,7 @@ class ExplorationWrapper(gym.Wrapper):
         is_new_landmark = True
         for landmark in self.landmarks:
             x_old, y_old, angle_old = landmark
-            distance = math.sqrt((x - x_old) ** 2 + (y - y_old) ** 2)
+            distance = math.sqrt((x - x_old)**2 + (y - y_old)**2)
 
             angle_diff = abs(angle - angle_old)
             angle_diff = min(angle_diff, 360.0 - angle_diff)

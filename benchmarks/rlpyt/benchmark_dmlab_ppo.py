@@ -1,4 +1,3 @@
-
 """
 Runs multiple instances of the
 
@@ -44,22 +43,21 @@ from algorithms.utils.arguments import default_cfg
 from benchmarks.rlpyt.benchmark_doom_ppo import DoomLstmAgent
 from envs.create_env import create_env
 
-
 env_idx = 0  # for debugging
 
 
 class DmlabEnv(Env):
-
-    def __init__(self,
-                 game=None,
-                 frame_skip=4,  # Frames per step (>=1).
-                 num_img_obs=4,  # Number of (past) frames in observation (>=1).
-
-                 clip_reward=True,
-                 episodic_lives=True,
-                 max_start_noops=30,
-                 repeat_action_probability=0.,
-                 horizon=27000,):
+    def __init__(
+        self,
+        game=None,
+        frame_skip=4,  # Frames per step (>=1).
+        num_img_obs=4,  # Number of (past) frames in observation (>=1).
+        clip_reward=True,
+        episodic_lives=True,
+        max_start_noops=30,
+        repeat_action_probability=0.,
+        horizon=27000,
+    ):
 
         cfg = default_cfg(env=game)
         cfg.res_w = 96
@@ -99,8 +97,13 @@ class DmlabEnv(Env):
         self.env.close()
 
 
-def build_and_train(game="doom_benchmark", run_ID=0, cuda_idx=None, n_parallel=-1,
-                    n_env=-1, n_timestep=-1, sample_mode=None):
+def build_and_train(game="doom_benchmark",
+                    run_ID=0,
+                    cuda_idx=None,
+                    n_parallel=-1,
+                    n_env=-1,
+                    n_timestep=-1,
+                    sample_mode=None):
     affinity = dict(cuda_idx=cuda_idx, workers_cpus=list(range(n_parallel)))
 
     gpu_cpu = "CPU" if cuda_idx is None else f"GPU {cuda_idx}"
@@ -112,7 +115,8 @@ def build_and_train(game="doom_benchmark", run_ID=0, cuda_idx=None, n_parallel=-
         print(f"Using CPU parallel sampler (agent in workers), {gpu_cpu} for optimizing.")
     elif sample_mode == "gpu":
         Sampler = GpuSampler
-        print(f"Using GPU parallel sampler (agent in master), {gpu_cpu} for sampling and optimizing.")
+        print(
+            f"Using GPU parallel sampler (agent in master), {gpu_cpu} for sampling and optimizing.")
     elif sample_mode == "alternating":
         Sampler = AlternatingSampler
         affinity["workers_cpus"] += affinity["workers_cpus"]  # (Double list)
@@ -165,8 +169,11 @@ if __name__ == "__main__":
     parser.add_argument('--n_parallel', help='number of sampler workers', type=int, default=12)
     parser.add_argument('--n_env', help='number of environments', type=int, default=16)
     parser.add_argument('--n_timestep', help='number of time steps', type=int, default=20)
-    parser.add_argument('--sample_mode', help='serial or parallel sampling',
-                        type=str, default='serial', choices=['serial', 'cpu', 'gpu', 'alternating'])
+    parser.add_argument('--sample_mode',
+                        help='serial or parallel sampling',
+                        type=str,
+                        default='serial',
+                        choices=['serial', 'cpu', 'gpu', 'alternating'])
 
     args = parser.parse_args()
     build_and_train(

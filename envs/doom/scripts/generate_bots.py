@@ -15,19 +15,17 @@ def fmt_bot(difficulty, idx):
     np.random.shuffle(weaponpref)
     weaponpref_str = ''.join([str(w) for w in weaponpref])  # currently not used
 
-    bot_str = (
-        '{ \n'
-        f'    name BOT_{difficulty}_{idx} \n'
-        f'    aiming {bot_param(difficulty)} \n'
-        f'    perfection {bot_param(difficulty)} \n'
-        f'    reaction {bot_param(difficulty)} \n'
-        f'    isp {bot_param(difficulty)} \n'
-        f'    color "00 ff 00" \n'
-        f'    skin base \n'
-        f'    //weaponpref	012345678 \n'
-        '} \n'
-        '\n'
-    )
+    bot_str = ('{ \n'
+               f'    name BOT_{difficulty}_{idx} \n'
+               f'    aiming {bot_param(difficulty)} \n'
+               f'    perfection {bot_param(difficulty)} \n'
+               f'    reaction {bot_param(difficulty)} \n'
+               f'    isp {bot_param(difficulty)} \n'
+               f'    color "00 ff 00" \n'
+               f'    skin base \n'
+               f'    //weaponpref	012345678 \n'
+               '} \n'
+               '\n')
     return bot_str
 
 

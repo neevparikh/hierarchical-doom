@@ -1,7 +1,6 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
-_params = ParamGrid([
-])
+_params = ParamGrid([])
 
 _experiment = Experiment(
     'basic',

@@ -52,7 +52,10 @@ def test_env_performance(make_env, env_type, verbose=False):
 
     fps = total_num_frames / t.experience
     log.debug('%s performance:', env_type)
-    log.debug('Took %.3f sec to collect %d frames on one CPU, %.1f FPS', t.experience, total_num_frames, fps)
+    log.debug('Took %.3f sec to collect %d frames on one CPU, %.1f FPS',
+              t.experience,
+              total_num_frames,
+              fps)
     log.debug('Avg. reset time %.3f s', t.reset / num_resets)
     log.debug('Timing: %s', t)
     env.close()
@@ -69,7 +72,10 @@ class TestDoom(TestCase):
     @staticmethod
     def make_env_bots_hybrid_actions(env_config, **kwargs):
         from envs.doom.doom_utils import make_doom_env
-        return make_doom_env('doom_deathmatch_bots', cfg=default_doom_cfg(), env_config=env_config, **kwargs)
+        return make_doom_env('doom_deathmatch_bots',
+                             cfg=default_doom_cfg(),
+                             env_config=env_config,
+                             **kwargs)
 
     def test_doom_env(self):
         self.assertIsNotNone(self.make_env_singleplayer(None))
@@ -89,7 +95,9 @@ class TestDoom(TestCase):
     def test_doom_two_color(self):
         from envs.doom.doom_utils import make_doom_env
         test_env_performance(
-            lambda env_config: make_doom_env('doom_two_colors_easy', cfg=default_doom_cfg()), 'doom', verbose=False,
+            lambda env_config: make_doom_env('doom_two_colors_easy', cfg=default_doom_cfg()),
+            'doom',
+            verbose=False,
         )
 
     def skip_test_recording(self):
@@ -133,7 +141,9 @@ class TestDmlab(TestCase):
     @staticmethod
     def make_env(env_config):
         from envs.dmlab.dmlab_env import make_dmlab_env
-        return make_dmlab_env('dmlab_nonmatch', cfg=default_cfg(env='dmlab_nonmatch'), env_config=None)
+        return make_dmlab_env('dmlab_nonmatch',
+                              cfg=default_cfg(env='dmlab_nonmatch'),
+                              env_config=None)
 
     @unittest.skipUnless(dmlab_available(), 'Dmlab package not installed')
     def test_dmlab_performance(self):

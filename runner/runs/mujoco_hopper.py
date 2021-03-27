@@ -14,7 +14,6 @@ _params = ParamGrid([
     ('actor_critic_share_weights', ['False']),
     ('max_policy_lag', [1000000]),
     ('adaptive_stddev', ['False']),
-
     ('ppo_epochs', [20]),
     ('ppo_clip_ratio', [0.3]),
     ('batch_size', [1024]),

@@ -24,10 +24,19 @@ def dict_of_lists_append(dict_of_lists, new_data, index):
 
 
 class PolicyWorker:
-    def __init__(
-        self, worker_idx, policy_id, cfg, obs_space, action_space, shared_buffers, policy_queue, actor_queues,
-        report_queue, task_queue, policy_lock, resume_experience_collection_cv
-    ):
+    def __init__(self,
+                 worker_idx,
+                 policy_id,
+                 cfg,
+                 obs_space,
+                 action_space,
+                 shared_buffers,
+                 policy_queue,
+                 actor_queues,
+                 report_queue,
+                 task_queue,
+                 policy_lock,
+                 resume_experience_collection_cv):
         log.info('Initializing policy worker %d for policy %d', worker_idx, policy_id)
 
         self.worker_idx = worker_idx
@@ -113,7 +122,8 @@ class PolicyWorker:
                     policy_outputs[key] = output_value.cpu()
 
             with timing.add_time('format_outputs'):
-                policy_outputs.policy_version = torch.empty([num_samples]).fill_(self.latest_policy_version)
+                policy_outputs.policy_version = torch.empty([num_samples
+                                                            ]).fill_(self.latest_policy_version)
 
                 # concat all tensors into a single tensor for performance
                 output_tensors = []
@@ -167,7 +177,10 @@ class PolicyWorker:
             if self.num_policy_updates % 10 == 0:
                 log.info(
                     'Updated weights on worker %d-%d, policy_version %d (%.5f)',
-                    self.policy_id, self.worker_idx, self.latest_policy_version, timing.weight_update,
+                    self.policy_id,
+                    self.worker_idx,
+                    self.latest_policy_version,
+                    timing.weight_update,
                 )
 
             self.num_policy_updates += 1
@@ -186,7 +199,9 @@ class PolicyWorker:
 
         with timing.timeit('init'):
             # initialize the Torch modules
-            log.info('Initializing model on the policy worker %d-%d...', self.policy_id, self.worker_idx)
+            log.info('Initializing model on the policy worker %d-%d...',
+                     self.policy_id,
+                     self.worker_idx)
 
             torch.set_num_threads(1)
 
@@ -197,12 +212,17 @@ class PolicyWorker:
             else:
                 self.device = torch.device('cpu')
 
-            self.actor_critic = create_actor_critic(self.cfg, self.obs_space, self.action_space, timing)
+            self.actor_critic = create_actor_critic(self.cfg,
+                                                    self.obs_space,
+                                                    self.action_space,
+                                                    timing)
             self.actor_critic.model_to_device(self.device)
             for p in self.actor_critic.parameters():
                 p.requires_grad = False  # we don't train anything here
 
-            log.info('Initialized model on the policy worker %d-%d!', self.policy_id, self.worker_idx)
+            log.info('Initialized model on the policy worker %d-%d!',
+                     self.policy_id,
+                     self.worker_idx)
 
         last_report = last_cache_cleanup = time.time()
         last_report_samples = 0
@@ -214,7 +234,8 @@ class PolicyWorker:
         # Although if your workflow involves very lengthy operations that often freeze workers, it can be beneficial
         # to set min_num_requests to 1 (at a cost of potential inefficiency, i.e. policy worker will use very small
         # batches)
-        min_num_requests = self.cfg.num_workers // (self.cfg.num_policies * self.cfg.policy_workers_per_policy)
+        min_num_requests = self.cfg.num_workers // (self.cfg.num_policies *
+                                                    self.cfg.policy_workers_per_policy)
         min_num_requests //= 3
         min_num_requests = max(1, min_num_requests)
         log.info('Min num requests: %d', min_num_requests)
@@ -229,7 +250,8 @@ class PolicyWorker:
                         self.resume_experience_collection_cv.wait(timeout=0.05)
 
                 waiting_started = time.time()
-                while len(self.requests) < min_num_requests and time.time() - waiting_started < wait_for_min_requests:
+                while len(self.requests) < min_num_requests and time.time(
+                ) - waiting_started < wait_for_min_requests:
                     try:
                         with timing.timeit('wait_policy'), timing.add_time('wait_policy_total'):
                             policy_requests = self.policy_queue.get_many(timeout=0.005)
@@ -269,19 +291,26 @@ class PolicyWorker:
                     if len(request_count) > 0:
                         stats['avg_request_count'] = np.mean(request_count)
 
-                    self.report_queue.put(dict(
-                        timing=timing_stats, samples=samples_since_last_report, policy_id=self.policy_id, stats=stats,
-                    ))
+                    self.report_queue.put(
+                        dict(
+                            timing=timing_stats,
+                            samples=samples_since_last_report,
+                            policy_id=self.policy_id,
+                            stats=stats,
+                        ))
                     last_report = time.time()
                     last_report_samples = self.total_num_samples
 
-                if time.time() - last_cache_cleanup > 300.0 or (not self.cfg.benchmark and self.total_num_samples < 1000):
+                if time.time() - last_cache_cleanup > 300.0 or (not self.cfg.benchmark and
+                                                                self.total_num_samples < 1000):
                     if self.cfg.device == 'gpu':
                         torch.cuda.empty_cache()
                     last_cache_cleanup = time.time()
 
             except KeyboardInterrupt:
-                log.warning('Keyboard interrupt detected on worker %d-%d', self.policy_id, self.worker_idx)
+                log.warning('Keyboard interrupt detected on worker %d-%d',
+                            self.policy_id,
+                            self.worker_idx)
                 self.terminate = True
             except:
                 log.exception('Unknown exception on policy worker')

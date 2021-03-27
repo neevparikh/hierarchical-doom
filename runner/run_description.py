@@ -19,7 +19,6 @@ class ParamGenerator:
 
 class ParamList(ParamGenerator):
     """The most simple kind of generator, represents just the list of parameter combinations."""
-
     def __init__(self, combinations):
         super(ParamList, self).__init__()
         self.combinations = combinations
@@ -36,7 +35,6 @@ class ParamList(ParamGenerator):
 
 class ParamGrid(ParamGenerator):
     """Parameter generator for grid search."""
-
     def __init__(self, grid_tuples):
         """Uses OrderedDict, so must be initialized with the list of tuples if you want to preserve order."""
         super(ParamGrid, self).__init__()
@@ -49,7 +47,8 @@ class ParamGrid(ParamGenerator):
             # last parameter, just return list of values for this parameter
             return [[value] for value in self.grid[params[param_idx]]]
         else:
-            subcombinations = self._generate_combinations(param_idx + 1, params)  # returns list of param combinations
+            subcombinations = self._generate_combinations(
+                param_idx + 1, params)  # returns list of param combinations
             result = []
 
             # iterate over all values of current parameter
@@ -75,7 +74,9 @@ class ParamGrid(ParamGenerator):
             all_combinations = np.random.permutation(all_combinations)
 
         for combination in all_combinations:
-            combination_dict = {param_name: combination[i] for (i, param_name) in enumerate(param_names)}
+            combination_dict = {
+                param_name: combination[i] for (i, param_name) in enumerate(param_names)
+            }
             yield combination_dict
 
 
@@ -109,7 +110,7 @@ class Experiment:
 
                     abbr = None
                     for l in range(len(param)):
-                        abbr = param[:l+3]
+                        abbr = param[:l + 3]
                         if abbr not in param_abbrs:
                             break
 

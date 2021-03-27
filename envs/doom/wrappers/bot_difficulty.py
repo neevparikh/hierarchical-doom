@@ -5,7 +5,6 @@ from utils.utils import log
 
 class BotDifficultyWrapper(gym.Wrapper):
     """Adjust bot difficulty according to agent's final position in the match."""
-
     def __init__(self, env, initial_difficulty=None):
         super().__init__(env)
 

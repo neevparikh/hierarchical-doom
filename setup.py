@@ -25,5 +25,4 @@ setup(
         'colorlog',
         'faster-fifo',
         'filelock',
-    ]
-)
+    ])

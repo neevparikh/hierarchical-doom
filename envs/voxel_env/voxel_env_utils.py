@@ -45,17 +45,22 @@ class Wrapper(gym.Wrapper, RewardShapingInterface, TrainingInfoInterface):
                 if 'episode_extra_stats' not in info:
                     info['episode_extra_stats'] = dict()
                 extra_stats = info['episode_extra_stats']
-                extra_stats[f'z_{self.env.unwrapped.scenario_name.casefold()}_true_reward'] = info['true_reward']
-                extra_stats[f'z_{self.env.unwrapped.scenario_name.casefold()}_reward'] = self.episode_rewards[i]
+                extra_stats[f'z_{self.env.unwrapped.scenario_name.casefold()}_true_reward'] = info[
+                    'true_reward']
+                extra_stats[
+                    f'z_{self.env.unwrapped.scenario_name.casefold()}_reward'] = self.episode_rewards[
+                        i]
 
-                approx_total_training_steps = self.training_info.get('approx_total_training_steps', 0)
+                approx_total_training_steps = self.training_info.get('approx_total_training_steps',
+                                                                     0)
                 extra_stats['z_approx_total_training_steps'] = approx_total_training_steps
 
                 self.episode_rewards[i] = 0
 
                 if self.increase_team_spirit:
                     rew_shaping = self.get_current_reward_shaping(i)
-                    rew_shaping['teamSpirit'] = min(approx_total_training_steps / self.max_team_spirit_steps, 1.0)
+                    rew_shaping['teamSpirit'] = min(
+                        approx_total_training_steps / self.max_team_spirit_steps, 1.0)
                     self.set_reward_shaping(rew_shaping, i)
                     extra_stats['teamSpirit'] = rew_shaping['teamSpirit']
 
@@ -70,7 +75,9 @@ def make_voxel_env(env_name, cfg=None, env_config=None, **kwargs):
         if env_config is not None and 'worker_index' in env_config:
             task_idx = env_config['worker_index']
         else:
-            log.warning('Could not find information about task id. Use task_id=0. (It is okay if this message appears once)')
+            log.warning(
+                'Could not find information about task id. Use task_id=0. (It is okay if this message appears once)'
+            )
             task_idx = 0
 
         env = make_env_multitask(
@@ -110,11 +117,35 @@ def voxel_env_override_defaults(env, parser):
 
 def add_voxel_env_args(env, parser):
     p = parser
-    p.add_argument('--voxel_num_envs_per_instance', default=1, type=int, help='Num simulated envs per instance of VoxelEnv')
-    p.add_argument('--voxel_num_agents_per_env', default=4, type=int, help='Number of agents in a single env withing a VoxelEnv instance. Total number of agents in one VoxelEnv = num_envs_per_instance * num_agents_per_env')
-    p.add_argument('--voxel_num_simulation_threads', default=1, type=int, help='Number of CPU threads to use per instance of VoxelEnv')
-    p.add_argument('--voxel_use_vulkan', default=True, type=str2bool, help='Whether to use Vulkan renderer')
+    p.add_argument('--voxel_num_envs_per_instance',
+                   default=1,
+                   type=int,
+                   help='Num simulated envs per instance of VoxelEnv')
+    p.add_argument(
+        '--voxel_num_agents_per_env',
+        default=4,
+        type=int,
+        help=
+        'Number of agents in a single env withing a VoxelEnv instance. Total number of agents in one VoxelEnv = num_envs_per_instance * num_agents_per_env'
+    )
+    p.add_argument('--voxel_num_simulation_threads',
+                   default=1,
+                   type=int,
+                   help='Number of CPU threads to use per instance of VoxelEnv')
+    p.add_argument('--voxel_use_vulkan',
+                   default=True,
+                   type=str2bool,
+                   help='Whether to use Vulkan renderer')
 
     # Team Spirit options
-    p.add_argument('--voxel_increase_team_spirit', default=False, type=str2bool, help='Increase team spirit from 0 to 1 over max_team_spirit_steps during training. At 1, the reward will be completely selfless.')
-    p.add_argument('--voxel_max_team_spirit_steps', default=1e9, type=float, help='Number of training steps when team spirit will hit 1.')
+    p.add_argument(
+        '--voxel_increase_team_spirit',
+        default=False,
+        type=str2bool,
+        help=
+        'Increase team spirit from 0 to 1 over max_team_spirit_steps during training. At 1, the reward will be completely selfless.'
+    )
+    p.add_argument('--voxel_max_team_spirit_steps',
+                   default=1e9,
+                   type=float,
+                   help='Number of training steps when team spirit will hit 1.')

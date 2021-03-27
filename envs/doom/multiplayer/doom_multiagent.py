@@ -25,19 +25,23 @@ def find_available_port(start_port, increment=1000):
 
 
 class VizdoomEnvMultiplayer(VizdoomEnv):
-    def __init__(
-            self,
-            action_space,
-            config_file,
-            player_id, num_agents, max_num_players, num_bots,
-            skip_frames, async_mode=False,
-            respawn_delay=0,
-            timelimit=0.0,
-            record_to=None):
+    def __init__(self,
+                 action_space,
+                 config_file,
+                 player_id,
+                 num_agents,
+                 max_num_players,
+                 num_bots,
+                 skip_frames,
+                 async_mode=False,
+                 respawn_delay=0,
+                 timelimit=0.0,
+                 record_to=None):
         super().__init__(
             action_space,
             config_file,
-            skip_frames=skip_frames, async_mode=async_mode,
+            skip_frames=skip_frames,
+            async_mode=async_mode,
             record_to=record_to,
         )
 
@@ -80,7 +84,8 @@ class VizdoomEnvMultiplayer(VizdoomEnv):
             return
 
         self._create_doom_game(self.mode)
-        port = DEFAULT_UDP_PORT if self.init_info is None else self.init_info.get('port', DEFAULT_UDP_PORT)
+        port = DEFAULT_UDP_PORT if self.init_info is None else self.init_info.get(
+            'port', DEFAULT_UDP_PORT)
 
         if self._is_server():
             log.info('Using port %d on host...', port)
@@ -128,8 +133,7 @@ class VizdoomEnvMultiplayer(VizdoomEnv):
             # Join existing game.
             self.game.add_game_args(
                 f'-join 127.0.0.1:{port} '  # Connect to a host for a multiplayer game.
-                f'+viz_connect_timeout {vizdoom_env_timeout} '
-            )
+                f'+viz_connect_timeout {vizdoom_env_timeout} ')
 
             # Name your agent and select color
             # colors:
@@ -139,7 +143,10 @@ class VizdoomEnvMultiplayer(VizdoomEnv):
         self.game.set_episode_timeout(int(self.timelimit * 60 * self.game.get_ticrate()))
 
         self._game_init(with_locking=False)  # locking is handled by the multi-agent wrapper
-        log.info('Initialized w:%d v:%d player:%d', self.worker_index, self.vector_index, self.player_id)
+        log.info('Initialized w:%d v:%d player:%d',
+                 self.worker_index,
+                 self.vector_index,
+                 self.player_id)
         self.initialized = True
 
     def _random_bot(self, difficulty, used_bots):

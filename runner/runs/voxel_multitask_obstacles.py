@@ -14,4 +14,5 @@ EXPERIMENT_1AGENT = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('voxel_env_v115_multitask_obstacles_v55', experiments=[EXPERIMENT_1AGENT])
+RUN_DESCRIPTION = RunDescription('voxel_env_v115_multitask_obstacles_v55',
+                                 experiments=[EXPERIMENT_1AGENT])

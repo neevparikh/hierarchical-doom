@@ -1,7 +1,6 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
-_params = ParamGrid([
-])
+_params = ParamGrid([])
 
 _experiments = [
     Experiment(
@@ -10,6 +9,5 @@ _experiments = [
         _params.generate_params(randomize=False),
     ),
 ]
-
 
 RUN_DESCRIPTION = RunDescription('paper_doom_battle2_appo_pbt_v65_fs4', experiments=_experiments)

@@ -24,9 +24,8 @@ def copy_plot_themes():
         print('Themes copied to %s' % stylelib_path)
     except:
         print(
-            'An error occured! Try to manually copy the *.mplstyle files. E.g.:\nmkdir -p %s && cp *.mplstyle %s' %
-            (stylelib_path, stylelib_path),
-        )
+            'An error occured! Try to manually copy the *.mplstyle files. E.g.:\nmkdir -p %s && cp *.mplstyle %s'
+            % (stylelib_path, stylelib_path),)
 
 
 def set_matplotlib_params():

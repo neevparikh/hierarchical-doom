@@ -34,7 +34,6 @@ for weapon in range(NUM_WEAPONS):
     # tend to ignore this, and change weapons at will
     SELECTED_WEAPON_REWARDS[f'SELECTED{weapon}'] = 0.0002 * pref
 
-
 # reward shaping scheme to convert env info into scalar reward
 REWARD_SHAPING_DEATHMATCH_V0 = dict(
     delta=dict(
@@ -51,14 +50,14 @@ REWARD_SHAPING_DEATHMATCH_V0 = dict(
 
 # "zero-sum" scheme for self-play scenarios
 REWARD_SHAPING_DEATHMATCH_V1 = copy.deepcopy(REWARD_SHAPING_DEATHMATCH_V0)
-REWARD_SHAPING_DEATHMATCH_V1['delta'].update(dict(
-    FRAGCOUNT=(+1, -0.001),
-    DEATHCOUNT=(-1, +1),
-    HITCOUNT=(0, 0),
-    DAMAGECOUNT=(+0.01, -0.01),
-    HEALTH=(+0.01, -0.01),
-))
-
+REWARD_SHAPING_DEATHMATCH_V1['delta'].update(
+    dict(
+        FRAGCOUNT=(+1, -0.001),
+        DEATHCOUNT=(-1, +1),
+        HITCOUNT=(0, 0),
+        DAMAGECOUNT=(+0.01, -0.01),
+        HEALTH=(+0.01, -0.01),
+    ))
 
 # just the same reward scheme for consistency, only battle does not have most game variables,
 # so only a very small reward shaping for collecting Health and Ammo will be applied.
@@ -85,7 +84,6 @@ def true_reward_frags(info):
 
 class DoomRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
     """Convert game info variables into scalar reward using a reward shaping scheme."""
-
     def __init__(self, env, reward_shaping_scheme=None, true_reward_func=None):
         gym.Wrapper.__init__(self, env)
         RewardShapingInterface.__init__(self)
@@ -144,13 +142,15 @@ class DoomRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
                 reward += reward_delta
                 deltas.append((var_name, reward_delta, delta))
-                self.reward_structure[var_name] = self.reward_structure.get(var_name, 0.0) + reward_delta
+                self.reward_structure[var_name] = self.reward_structure.get(var_name,
+                                                                            0.0) + reward_delta
 
         return reward, deltas
 
     def _selected_weapon_rewards(self, selected_weapon, selected_weapon_ammo, deltas):
         # we must keep the weapon ready for a certain number of frames to get rewards
-        unholstered = len(self.selected_weapon) > 4 and all(sw == selected_weapon for sw in self.selected_weapon)
+        unholstered = len(self.selected_weapon) > 4 and all(
+            sw == selected_weapon for sw in self.selected_weapon)
         reward = 0.0
 
         if selected_weapon_ammo > 0 and unholstered:
@@ -185,7 +185,9 @@ class DoomRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
             shaping_reward, deltas = self._delta_rewards(info)
 
             shaping_reward += self._selected_weapon_rewards(
-                selected_weapon, selected_weapon_ammo, deltas,
+                selected_weapon,
+                selected_weapon_ammo,
+                deltas,
             )
 
             if abs(shaping_reward) > 2.5 and not self.print_once:
@@ -232,7 +234,9 @@ class DoomRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
             log.info(
                 'Total shaping reward is %.3f for %d (done %d)',
-                self.total_shaping_reward, player_id, done,
+                self.total_shaping_reward,
+                player_id,
+                done,
             )
 
         # remember new variable values

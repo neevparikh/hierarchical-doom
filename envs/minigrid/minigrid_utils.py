@@ -7,7 +7,6 @@ from envs.env_wrappers import PixelFormatChwWrapper, RecordingWrapper
 
 class RenameImageObsWrapper(gym.ObservationWrapper):
     """We call the main observation just 'obs' in all algorithms."""
-
     def __init__(self, env):
         super().__init__(env)
 

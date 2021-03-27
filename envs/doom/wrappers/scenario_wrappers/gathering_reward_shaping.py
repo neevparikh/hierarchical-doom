@@ -3,7 +3,6 @@ import gym
 
 class DoomGatheringRewardShaping(gym.Wrapper):
     """Reward shaping specific for gathering scenarios."""
-
     def __init__(self, env):
         super().__init__(env)
         self._prev_health = None

@@ -16,7 +16,8 @@ def run(run_description, args):
 
     log.info('Starting processes with base cmds: %r', [e.cmd for e in experiments])
     log.info('Max parallel processes is %d', max_parallel)
-    log.info('Monitor log files using\n\n\ttail -f train_dir/%s/**/**/log.txt\n\n', run_description.run_name)
+    log.info('Monitor log files using\n\n\ttail -f train_dir/%s/**/**/log.txt\n\n',
+             run_description.run_name)
 
     processes = []
     processes_per_gpu = {g: [] for g in range(args.num_gpus)}
@@ -67,7 +68,8 @@ def run(run_description, args):
                 best_gpu, best_gpu_available_processes = find_least_busy_gpu()
                 log.info(
                     'The least busy gpu is %d where we can run %d more processes',
-                    best_gpu, best_gpu_available_processes,
+                    best_gpu,
+                    best_gpu_available_processes,
                 )
                 envvars['CUDA_VISIBLE_DEVICES'] = f'{best_gpu}'
 

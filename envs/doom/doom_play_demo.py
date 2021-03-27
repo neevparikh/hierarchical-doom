@@ -23,8 +23,13 @@ def main():
         env = make_doom_env(args.env, cfg=cfg, custom_resolution='1280x720')
     else:
         env = make_doom_env_impl(
-            spec, cfg=cfg, custom_resolution='1280x720',
-            player_id=0, num_agents=spec.num_agents, max_num_players=spec.num_agents, num_bots=spec.num_bots,
+            spec,
+            cfg=cfg,
+            custom_resolution='1280x720',
+            player_id=0,
+            num_agents=spec.num_agents,
+            max_num_players=spec.num_agents,
+            num_bots=spec.num_bots,
         )
 
     mode = 'replay'

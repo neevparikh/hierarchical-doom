@@ -16,14 +16,12 @@ from utils.utils import log, ensure_dir_exists
 set_matplotlib_params()
 
 # plt.rcParams['figure.figsize'] = (1.5*8.20, 3) #(2.5, 2.0) 7.5， 4
-plt.rcParams['figure.figsize'] = (5.5, 3.4) #(2.5, 2.0) 7.5， 4
-
+plt.rcParams['figure.figsize'] = (5.5, 3.4)  #(2.5, 2.0) 7.5， 4
 
 SAMPLE_FACTORY = 'SampleFactory'
 SEED_RL = 'SeedRL'
 
 ALGO_NAME = {SAMPLE_FACTORY: 'SampleFactory APPO', SEED_RL: 'SeedRL V-trace'}
-
 
 REW_KEY = {
     SAMPLE_FACTORY: '0_aux/avg_true_reward',
@@ -34,7 +32,6 @@ COLOR_FRAMEWORK = {
     SAMPLE_FACTORY: ORANGE,
     SEED_RL: BLUE,
 }
-
 
 ENVS_LIST = [
     ('doom_my_way_home', None),
@@ -75,25 +72,38 @@ def extract(experiments, framework):
     # scalar_accumulators = [EventAccumulator(str(dpath / dname / subpath)).Reload().scalars
     #                        for dname in os.listdir(dpath) if dname != FOLDER_NAME and dname in hide_file]
 
-    scalar_accumulators = [EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments]
+    scalar_accumulators = [
+        EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments
+    ]
 
     log.debug('Event Accumulator finished!')
 
     # Filter non event files
-    scalar_accumulators = [scalar_accumulator for scalar_accumulator in scalar_accumulators if scalar_accumulator.Keys()]
+    scalar_accumulators = [
+        scalar_accumulator for scalar_accumulator in scalar_accumulators
+        if scalar_accumulator.Keys()
+    ]
 
     # Get and validate all scalar keys
     # zhehui sorted(scalar_accumulator.Keys())
-    all_keys = [tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators]
+    all_keys = [
+        tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators
+    ]
     assert len(set(all_keys)) == 1, "All runs need to have the same scalar keys. There are mismatches in {}".format(all_keys)
     keys = all_keys[0]
 
-    all_scalar_events_per_key = [[scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators] for key in keys]
+    all_scalar_events_per_key = [[
+        scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators
+    ] for key in keys]
 
     # Get and validate all steps per key
     # sorted(all_scalar_events) sorted(scalar_events)
-    x_per_key = [[tuple(scalar_event.step for scalar_event in sorted(scalar_events)) for scalar_events in sorted(all_scalar_events)]
-                         for all_scalar_events in all_scalar_events_per_key]
+    x_per_key = [[
+        tuple(scalar_event.step
+              for scalar_event in sorted(scalar_events))
+        for scalar_events in sorted(all_scalar_events)
+    ]
+                 for all_scalar_events in all_scalar_events_per_key]
 
     # zhehui
     # import linear interpolation
@@ -101,7 +111,11 @@ def extract(experiments, framework):
 
     # modify_all_steps_per_key = tuple(int(step_id*1e6) for step_id in range(1, int(1e8/1e6 + 1)))
     plot_step = int(5e5)
-    all_steps_per_key = [[tuple(int(step_id) for step_id in range(0, int(1e8) + plot_step, plot_step)) for scalar_events in sorted(all_scalar_events)]
+    all_steps_per_key = [[
+        tuple(int(step_id)
+              for step_id in range(0, int(1e8) + plot_step, plot_step))
+        for scalar_events in sorted(all_scalar_events)
+    ]
                          for all_scalar_events in all_scalar_events_per_key]
 
     for i, all_steps in enumerate(all_steps_per_key):
@@ -111,10 +125,17 @@ def extract(experiments, framework):
     steps_per_key = [all_steps[0] for all_steps in all_steps_per_key]
 
     # Get and average wall times per step per key
-    wall_times_per_key = [[tuple(scalar_event.wall_time for scalar_event in scalar_events) for scalar_events in all_scalar_events] for all_scalar_events in all_scalar_events_per_key]
+    wall_times_per_key = [[
+        tuple(scalar_event.wall_time
+              for scalar_event in scalar_events)
+        for scalar_events in all_scalar_events
+    ]
+                          for all_scalar_events in all_scalar_events_per_key]
 
     # Get values per step per key
-    values_per_key = [[[scalar_event.value for scalar_event in scalar_events] for scalar_events in all_scalar_events]
+    values_per_key = [[[scalar_event.value
+                        for scalar_event in scalar_events]
+                       for scalar_events in all_scalar_events]
                       for all_scalar_events in all_scalar_events_per_key]
 
     true_reward_key = REW_KEY[framework]
@@ -195,7 +216,8 @@ def extract_data_tensorboard_events(path, framework):
             if env not in experiments_by_env:
                 experiments_by_env[env] = []
 
-            if env in experiment_dir and (does_not_contain is None or does_not_contain not in experiment_dir):
+            if env in experiment_dir and (does_not_contain is None or
+                                          does_not_contain not in experiment_dir):
                 experiments_by_env[env].append(experiment_dir)
 
     for env, experiments in experiments_by_env.items():
@@ -279,7 +301,8 @@ def extract_data_csv(path, framework):
                 experiments_by_env[env] = []
 
             csv_filename = os.path.basename(csv_file_path)
-            if env in csv_filename and (does_not_contain is None or does_not_contain not in csv_filename):
+            if env in csv_filename and (does_not_contain is None or
+                                        does_not_contain not in csv_filename):
                 experiments_by_env[env].append(csv_file_path)
 
     xs_ys_by_env = dict()
@@ -355,7 +378,13 @@ def plot(env, interpolated_key, top_ax, bottom_ax, count, framework):
     color = COLOR_FRAMEWORK[framework]
 
     sf_plot, = top_ax.plot(x, y_mean, color=color, linewidth=lw, antialiased=True)
-    top_ax.fill_between(x, y_minus_std, y_plus_std, color=color, alpha=0.25, antialiased=True, linewidth=0.0)
+    top_ax.fill_between(x,
+                        y_minus_std,
+                        y_plus_std,
+                        color=color,
+                        alpha=0.25,
+                        antialiased=True,
+                        linewidth=0.0)
 
     # top_ax.legend(prop={'size': 6}, loc='lower right')
 
@@ -386,7 +415,13 @@ def plot(env, interpolated_key, top_ax, bottom_ax, count, framework):
 
     label = algo_name if count == 1 else None
     bottom_ax.plot(minutes, y_mean, color=color, label=label, linewidth=lw, antialiased=True)
-    bottom_ax.fill_between(minutes, y_minus_std, y_plus_std, color=color, alpha=0.25, antialiased=True, linewidth=0.0)
+    bottom_ax.fill_between(minutes,
+                           y_minus_std,
+                           y_plus_std,
+                           color=color,
+                           alpha=0.25,
+                           antialiased=True,
+                           linewidth=0.0)
 
     if count == 1:
         bottom_ax.legend(prop={'size': 6}, loc='lower right')
@@ -408,7 +443,8 @@ def main():
 
     fig, (top_ax, bottom_ax) = plt.subplots(2, 2)
 
-    interpolated_keys_by_env = extract_data_tensorboard_events(sample_factory_runs_path, SAMPLE_FACTORY)
+    interpolated_keys_by_env = extract_data_tensorboard_events(sample_factory_runs_path,
+                                                               SAMPLE_FACTORY)
     plot_envs(interpolated_keys_by_env, top_ax, bottom_ax, SAMPLE_FACTORY)
 
     interpolated_keys_by_env = extract_data_csv(seed_rl_runs_path, SEED_RL)
@@ -422,7 +458,10 @@ def main():
 
     plt.margins(0, 0)
     plot_name = f'wall_time'
-    plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_inches='tight', pad_inches=0)
+    plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'),
+                format='pdf',
+                bbox_inches='tight',
+                pad_inches=0)
 
     return 0
 

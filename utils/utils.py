@@ -20,21 +20,19 @@ from colorlog import ColoredFormatter
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 
-formatter = ColoredFormatter(
-    "%(log_color)s[%(asctime)s][%(process)05d] %(message)s",
-    datefmt=None,
-    reset=True,
-    log_colors={
-        'DEBUG': 'cyan',
-        'INFO': 'white,bold',
-        'INFOV': 'cyan,bold',
-        'WARNING': 'yellow',
-        'ERROR': 'red,bold',
-        'CRITICAL': 'red,bg_white',
-    },
-    secondary_log_colors={},
-    style='%'
-)
+formatter = ColoredFormatter("%(log_color)s[%(asctime)s][%(process)05d] %(message)s",
+                             datefmt=None,
+                             reset=True,
+                             log_colors={
+                                 'DEBUG': 'cyan',
+                                 'INFO': 'white,bold',
+                                 'INFOV': 'cyan,bold',
+                                 'WARNING': 'yellow',
+                                 'ERROR': 'red,bold',
+                                 'CRITICAL': 'red,bg_white',
+                             },
+                             secondary_log_colors={},
+                             style='%')
 ch.setFormatter(formatter)
 
 log = logging.getLogger('rl')
@@ -43,8 +41,8 @@ log.handlers = []  # No duplicated handlers
 log.propagate = False  # workaround for duplicated logs in ipython
 log.addHandler(ch)
 
-
 # general Python utilities
+
 
 def is_module_available(module_name):
     try:
@@ -104,6 +102,7 @@ def static_vars(**kwargs):
         for k in kwargs:
             setattr(func, k, kwargs[k])
         return func
+
     return decorate
 
 
@@ -122,25 +121,31 @@ def safe_put(q, msg, attempts=3, queue_name=''):
             q.put(msg)
             return
         except Full:
-            log.warning('Could not put msg to queue, the queue %s is full! Attempt %d', queue_name, attempt)
+            log.warning('Could not put msg to queue, the queue %s is full! Attempt %d',
+                        queue_name,
+                        attempt)
 
-    log.error('Failed to put msg to queue %s after %d attempts. The message is lost!', queue_name, attempts)
+    log.error('Failed to put msg to queue %s after %d attempts. The message is lost!',
+              queue_name,
+              attempts)
 
 
 # CLI args
 
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
-    if isinstance(v, str) and v.lower() in ('true', ):
+    if isinstance(v, str) and v.lower() in ('true',):
         return True
-    elif isinstance(v, str) and v.lower() in ('false', ):
+    elif isinstance(v, str) and v.lower() in ('false',):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected')
 
 
 # numpy stuff
+
 
 def numpy_all_the_way(list_of_arrays):
     """Turn a list of numpy arrays into a 2D numpy array."""
@@ -163,6 +168,7 @@ def ensure_contigious(x):
 
 # matplotlib
 
+
 def figure_to_numpy(figure):
     """
     @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
@@ -183,6 +189,7 @@ def figure_to_numpy(figure):
 
 
 # os-related stuff
+
 
 def get_free_disk_space_mb(cfg):
     statvfs = os.statvfs(experiments_dir(cfg))
@@ -266,7 +273,8 @@ def cores_for_worker_process(worker_idx, num_workers, cpu_count):
         remaining_workers = num_workers % cpu_count
         if cpu_count % remaining_workers == 0:
             cores_to_use = cpu_count // remaining_workers
-            cores = list(range(worker_idx_modulo * cores_to_use, (worker_idx_modulo + 1) * cores_to_use, 1))
+            cores = list(
+                range(worker_idx_modulo * cores_to_use, (worker_idx_modulo + 1) * cores_to_use, 1))
 
     return cores
 
@@ -288,6 +296,7 @@ def set_process_cpu_affinity(worker_idx, num_workers):
 
 
 # working with filesystem
+
 
 def ensure_dir_exists(path):
     if not os.path.exists(path):
@@ -353,8 +362,7 @@ def done_filename(cfg):
 def get_git_commit_hash():
     path_to_project = os.path.dirname(os.path.realpath(__file__))
     try:
-        git_hash = check_output(['git', 'rev-parse', 'HEAD'],
-                                cwd=path_to_project,
+        git_hash = check_output(['git', 'rev-parse', 'HEAD'], cwd=path_to_project,
                                 timeout=5).strip().decode('ascii')
     except CalledProcessError:
         # this scenario is for when there's no git and we are returning an unknown value
@@ -366,7 +374,6 @@ def save_git_diff(directory):
     path_to_project = os.path.dirname(os.path.realpath(__file__))
     try:
         with open(join(directory, 'git.diff'), 'w') as outfile:
-            run(['git', 'diff'],
-                stdout=outfile, cwd=path_to_project, timeout=5)
+            run(['git', 'diff'], stdout=outfile, cwd=path_to_project, timeout=5)
     except CalledProcessError:
         pass

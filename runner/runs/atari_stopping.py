@@ -12,4 +12,9 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('atari_v39_stopping', experiments=[_experiment], pause_between_experiments=10, use_gpus=2, experiments_per_gpu=2, max_parallel=4)
+RUN_DESCRIPTION = RunDescription('atari_v39_stopping',
+                                 experiments=[_experiment],
+                                 pause_between_experiments=10,
+                                 use_gpus=2,
+                                 experiments_per_gpu=2,
+                                 max_parallel=4)

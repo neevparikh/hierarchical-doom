@@ -1,4 +1,3 @@
-
 """
 Runs multiple instances of the
 
@@ -43,27 +42,26 @@ from rlpyt.utils.logging.context import logger_context
 from algorithms.utils.arguments import default_cfg
 from envs.create_env import create_env
 
-
 env_idx = 0  # for debugging
 
 
 class VizdoomEnv(Env):
-
-    def __init__(self,
-                 game=None,
-                 frame_skip=4,  # Frames per step (>=1).
-                 num_img_obs=4,  # Number of (past) frames in observation (>=1).
-
-                 clip_reward=True,
-                 episodic_lives=True,
-                 max_start_noops=30,
-                 repeat_action_probability=0.,
-                 horizon=27000,):
+    def __init__(
+        self,
+        game=None,
+        frame_skip=4,  # Frames per step (>=1).
+        num_img_obs=4,  # Number of (past) frames in observation (>=1).
+        clip_reward=True,
+        episodic_lives=True,
+        max_start_noops=30,
+        repeat_action_probability=0.,
+        horizon=27000,
+    ):
 
         if not game:
             game = 'doom_battle'
 
-        cfg=default_cfg(env=game)
+        cfg = default_cfg(env=game)
         cfg.wide_aspect_ratio = False
 
         self.env = create_env(game, cfg=cfg)
@@ -106,19 +104,18 @@ class VizdoomEnv(Env):
 
 
 class DoomLstmModel(torch.nn.Module):
-
     def __init__(
-            self,
-            image_shape,
-            output_size,
-            fc_sizes=512,  # Between conv and lstm.
-            lstm_size=512,
-            use_maxpool=False,
-            channels=None,  # None uses default.
-            kernel_sizes=None,
-            strides=None,
-            paddings=None,
-            ):
+        self,
+        image_shape,
+        output_size,
+        fc_sizes=512,  # Between conv and lstm.
+        lstm_size=512,
+        use_maxpool=False,
+        channels=None,  # None uses default.
+        kernel_sizes=None,
+        strides=None,
+        paddings=None,
+    ):
         super().__init__()
 
         # same model architecture as Sample-Factory
@@ -148,11 +145,13 @@ class DoomLstmModel(torch.nn.Module):
         lead_dim, T, B, img_shape = infer_leading_dims(img, 3)
 
         fc_out = self.conv(img.view(T * B, *img_shape))
-        lstm_input = torch.cat([
-            fc_out.view(T, B, -1),
-            prev_action.view(T, B, -1),  # Assumed onehot.
-            prev_reward.view(T, B, 1),
-            ], dim=2)
+        lstm_input = torch.cat(
+            [
+                fc_out.view(T, B, -1),
+                prev_action.view(T, B, -1),  # Assumed onehot.
+                prev_reward.view(T, B, 1),
+            ],
+            dim=2)
         init_rnn_state = None if init_rnn_state is None else tuple(init_rnn_state)
         lstm_out, (hn, cn) = self.lstm(lstm_input, init_rnn_state)
         pi = F.softmax(self.pi(lstm_out.view(T * B, -1)), dim=-1)
@@ -176,8 +175,13 @@ class DoomLstmAgent(DoomMixin, AlternatingRecurrentCategoricalPgAgent):
         super().__init__(ModelCls=ModelCls, **kwargs)
 
 
-def build_and_train(game="doom_benchmark", run_ID=0, cuda_idx=None, n_parallel=-1,
-                    n_env=-1, n_timestep=-1, sample_mode=None):
+def build_and_train(game="doom_benchmark",
+                    run_ID=0,
+                    cuda_idx=None,
+                    n_parallel=-1,
+                    n_env=-1,
+                    n_timestep=-1,
+                    sample_mode=None):
     affinity = dict(cuda_idx=cuda_idx, workers_cpus=list(range(n_parallel)))
 
     gpu_cpu = "CPU" if cuda_idx is None else f"GPU {cuda_idx}"
@@ -189,7 +193,8 @@ def build_and_train(game="doom_benchmark", run_ID=0, cuda_idx=None, n_parallel=-
         print(f"Using CPU parallel sampler (agent in workers), {gpu_cpu} for optimizing.")
     elif sample_mode == "gpu":
         Sampler = GpuSampler
-        print(f"Using GPU parallel sampler (agent in master), {gpu_cpu} for sampling and optimizing.")
+        print(
+            f"Using GPU parallel sampler (agent in master), {gpu_cpu} for sampling and optimizing.")
     elif sample_mode == "alternating":
         Sampler = AlternatingSampler
         affinity["workers_cpus"] += affinity["workers_cpus"]  # (Double list)
@@ -241,8 +246,11 @@ if __name__ == "__main__":
     parser.add_argument('--n_parallel', help='number of sampler workers', type=int, default=12)
     parser.add_argument('--n_env', help='number of environments', type=int, default=16)
     parser.add_argument('--n_timestep', help='number of time steps', type=int, default=20)
-    parser.add_argument('--sample_mode', help='serial or parallel sampling',
-                        type=str, default='serial', choices=['serial', 'cpu', 'gpu', 'alternating'])
+    parser.add_argument('--sample_mode',
+                        help='serial or parallel sampling',
+                        type=str,
+                        default='serial',
+                        choices=['serial', 'cpu', 'gpu', 'alternating'])
 
     args = parser.parse_args()
     build_and_train(

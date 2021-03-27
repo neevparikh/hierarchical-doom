@@ -14,34 +14,33 @@ from envs.dmlab.dmlab30 import DMLAB_INSTRUCTIONS, DMLAB_MAX_INSTRUCTION_LEN, DM
 from utils.utils import log, ensure_dir_exists
 
 ACTION_SET = (
-    (0, 0, 0, 1, 0, 0, 0),    # Forward
-    (0, 0, 0, -1, 0, 0, 0),   # Backward
-    (0, 0, -1, 0, 0, 0, 0),   # Strafe Left
-    (0, 0, 1, 0, 0, 0, 0),    # Strafe Right
+    (0, 0, 0, 1, 0, 0, 0),  # Forward
+    (0, 0, 0, -1, 0, 0, 0),  # Backward
+    (0, 0, -1, 0, 0, 0, 0),  # Strafe Left
+    (0, 0, 1, 0, 0, 0, 0),  # Strafe Right
     (-20, 0, 0, 0, 0, 0, 0),  # Look Left
-    (20, 0, 0, 0, 0, 0, 0),   # Look Right
+    (20, 0, 0, 0, 0, 0, 0),  # Look Right
     (-20, 0, 0, 1, 0, 0, 0),  # Look Left + Forward
-    (20, 0, 0, 1, 0, 0, 0),   # Look Right + Forward
-    (0, 0, 0, 0, 1, 0, 0),    # Fire.
+    (20, 0, 0, 1, 0, 0, 0),  # Look Right + Forward
+    (0, 0, 0, 0, 1, 0, 0),  # Fire.
 )
 
-
 EXTENDED_ACTION_SET = (
-    (0, 0, 0, 1, 0, 0, 0),    # Forward
-    (0, 0, 0, -1, 0, 0, 0),   # Backward
-    (0, 0, -1, 0, 0, 0, 0),   # Strafe Left
-    (0, 0, 1, 0, 0, 0, 0),    # Strafe Right
+    (0, 0, 0, 1, 0, 0, 0),  # Forward
+    (0, 0, 0, -1, 0, 0, 0),  # Backward
+    (0, 0, -1, 0, 0, 0, 0),  # Strafe Left
+    (0, 0, 1, 0, 0, 0, 0),  # Strafe Right
     (-10, 0, 0, 0, 0, 0, 0),  # Small Look Left
-    (10, 0, 0, 0, 0, 0, 0),   # Small Look Right
+    (10, 0, 0, 0, 0, 0, 0),  # Small Look Right
     (-60, 0, 0, 0, 0, 0, 0),  # Large Look Left
-    (60, 0, 0, 0, 0, 0, 0),   # Large Look Right
-    (0, 10, 0, 0, 0, 0, 0),   # Look Down
+    (60, 0, 0, 0, 0, 0, 0),  # Large Look Right
+    (0, 10, 0, 0, 0, 0, 0),  # Look Down
     (0, -10, 0, 0, 0, 0, 0),  # Look Up
     (-10, 0, 0, 1, 0, 0, 0),  # Forward + Small Look Left
-    (10, 0, 0, 1, 0, 0, 0),   # Forward + Small Look Right
+    (10, 0, 0, 1, 0, 0, 0),  # Forward + Small Look Right
     (-60, 0, 0, 1, 0, 0, 0),  # Forward + Large Look Left
-    (60, 0, 0, 1, 0, 0, 0),   # Forward + Large Look Right
-    (0, 0, 0, 0, 1, 0, 0),    # Fire.
+    (60, 0, 0, 1, 0, 0, 0),  # Forward + Large Look Right
+    (0, 0, 0, 0, 1, 0, 0),  # Fire.
 )
 
 
@@ -56,9 +55,21 @@ def string_to_hash_bucket(s, vocabulary_size):
 
 class DmlabGymEnv(gym.Env):
     def __init__(
-            self, task_id, level, action_repeat, res_w, res_h, benchmark_mode, renderer, dataset_path,
-            with_instructions, extended_action_set, use_level_cache, level_cache_path,
-            gpu_index, extra_cfg=None,
+        self,
+        task_id,
+        level,
+        action_repeat,
+        res_w,
+        res_h,
+        benchmark_mode,
+        renderer,
+        dataset_path,
+        with_instructions,
+        extended_action_set,
+        use_level_cache,
+        level_cache_path,
+        gpu_index,
+        extra_cfg=None,
     ):
         self.width = res_w
         self.height = res_h
@@ -109,15 +120,19 @@ class DmlabGymEnv(gym.Env):
                 raise Exception(
                     'DMLab global level cache object is not initialized! Make sure to call'
                     'dmlab_ensure_global_cache_initialized() in the main thread before you fork any child processes'
-                    'or create any DMLab envs'
-                )
+                    'or create any DMLab envs')
 
         self.dmlab = deepmind_lab.Lab(
-            level, observation_format, config=config, renderer=renderer, level_cache=env_level_cache,
+            level,
+            observation_format,
+            config=config,
+            renderer=renderer,
+            level_cache=env_level_cache,
         )
 
         self.action_set = EXTENDED_ACTION_SET if extended_action_set else ACTION_SET
-        self.action_list = np.array(self.action_set, dtype=np.intc)  # DMLAB requires intc type for actions
+        self.action_list = np.array(self.action_set,
+                                    dtype=np.intc)  # DMLAB requires intc type for actions
 
         self.last_observation = None
 
@@ -128,16 +143,20 @@ class DmlabGymEnv(gym.Env):
         self.action_space = gym.spaces.Discrete(len(self.action_set))
 
         self.observation_space = gym.spaces.Dict(
-            obs=gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, 3), dtype=np.uint8)
-        )
+            obs=gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, 3), dtype=np.uint8))
         if self.with_instructions:
             self.observation_space.spaces[self.instructions_observation] = gym.spaces.Box(
-                low=0, high=DMLAB_VOCABULARY_SIZE, shape=[DMLAB_MAX_INSTRUCTION_LEN], dtype=np.int32,
+                low=0,
+                high=DMLAB_VOCABULARY_SIZE,
+                shape=[DMLAB_MAX_INSTRUCTION_LEN],
+                dtype=np.int32,
             )
 
         self.benchmark_mode = benchmark_mode
         if self.benchmark_mode:
-            log.warning('DmLab benchmark mode is true! Use this only for testing, not for actual training runs!')
+            log.warning(
+                'DmLab benchmark mode is true! Use this only for testing, not for actual training runs!'
+            )
 
         self.seed()
 
@@ -173,7 +192,7 @@ class DmlabGymEnv(gym.Env):
             self.curr_cache = dmlab_level_cache.DMLAB_GLOBAL_LEVEL_CACHE[self.curr_policy_idx]
             self.last_reset_seed = self.curr_cache.get_unused_seed(self.level, self.random_state)
         else:
-            self.last_reset_seed = self.random_state.randint(0, 2 ** 31 - 1)
+            self.last_reset_seed = self.random_state.randint(0, 2**31 - 1)
 
         self.dmlab.reset(seed=self.last_reset_seed)
         self.last_observation = self.format_obs_dict(self.dmlab.observations())
@@ -209,7 +228,8 @@ class DmlabGymEnv(gym.Env):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         scale = self.render_scale
-        img_big = cv2.resize(img, (self.width * scale, self.height * scale), interpolation=cv2.INTER_NEAREST)
+        img_big = cv2.resize(img, (self.width * scale, self.height * scale),
+                             interpolation=cv2.INTER_NEAREST)
         cv2.imshow('dmlab', img_big)
 
         since_last_frame = time.time() - self.last_frame
@@ -239,5 +259,8 @@ class DmlabGymEnv(gym.Env):
 
     def write(self, key, pk3_path):
         """Environment object itself acts as a proxy to the global level cache."""
-        log.debug('Add new level to cache! Level %s seed %r key %s', self.level_name, self.last_reset_seed, key)
+        log.debug('Add new level to cache! Level %s seed %r key %s',
+                  self.level_name,
+                  self.last_reset_seed,
+                  key)
         self.curr_cache.add_new_level(self.level, self.last_reset_seed, key, pk3_path)

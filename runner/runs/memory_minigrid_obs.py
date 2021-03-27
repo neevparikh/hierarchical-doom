@@ -1,7 +1,8 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
 _params = ParamGrid([
-    ('env', ['MiniGrid-MemoryS7-v0', 'MiniGrid-RedBlueDoors-8x8-v0', 'MiniGrid-MemoryS17Random-v0']),
+    ('env', ['MiniGrid-MemoryS7-v0', 'MiniGrid-RedBlueDoors-8x8-v0',
+             'MiniGrid-MemoryS17Random-v0']),
 ])
 
 _experiment = Experiment(
@@ -10,4 +11,9 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('mem_minigrid_obs_v26', experiments=[_experiment], pause_between_experiments=5, use_gpus=2, experiments_per_gpu=4, max_parallel=12)
+RUN_DESCRIPTION = RunDescription('mem_minigrid_obs_v26',
+                                 experiments=[_experiment],
+                                 pause_between_experiments=5,
+                                 use_gpus=2,
+                                 experiments_per_gpu=4,
+                                 max_parallel=12)

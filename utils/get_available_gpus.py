@@ -3,7 +3,9 @@ import sys
 
 def get_available_gpus_without_triggering_pytorch_cuda_initialization(envvars):
     import subprocess
-    out = subprocess.run([sys.executable, '-m', 'utils.get_available_gpus'], capture_output=True, env=envvars)
+    out = subprocess.run([sys.executable, '-m', 'utils.get_available_gpus'],
+                         capture_output=True,
+                         env=envvars)
     text_output = out.stdout.decode()
     from utils.utils import log
     log.debug('Queried available GPUs: %s', text_output)

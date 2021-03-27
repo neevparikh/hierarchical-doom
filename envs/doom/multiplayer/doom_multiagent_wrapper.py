@@ -43,6 +43,7 @@ def retry_dm(exception_class=Exception, num_attempts=3, sleep_time=1, should_res
                         sleep(sleep_time)
 
         return wrapper
+
     return decorator
 
 
@@ -87,7 +88,12 @@ def init_multiplayer_env(make_env_func, player_id, env_config, init_info=None):
 
 
 class MultiAgentEnvWorker:
-    def __init__(self, player_id, make_env_func, env_config, use_multiprocessing=False, reset_on_init=True):
+    def __init__(self,
+                 player_id,
+                 make_env_func,
+                 env_config,
+                 use_multiprocessing=False,
+                 reset_on_init=True):
         self.player_id = player_id
         self.make_env_func = make_env_func
         self.env_config = env_config
@@ -219,7 +225,9 @@ class MultiAgentEnv(gym.Env, RewardShapingInterface):
     def set_reward_shaping(self, reward_shaping: dict, agent_idx: int):
         self.current_reward_shaping[agent_idx] = reward_shaping
         self.set_env_attr(
-            agent_idx, 'unwrapped.reward_shaping_interface.reward_shaping_scheme', reward_shaping,
+            agent_idx,
+            'unwrapped.reward_shaping_interface.reward_shaping_scheme',
+            reward_shaping,
         )
 
     def await_tasks(self, data, task_type, timeout=None):
@@ -267,8 +275,10 @@ class MultiAgentEnv(gym.Env, RewardShapingInterface):
             return
 
         self.workers = [
-            MultiAgentEnvWorker(i, self.make_env_func, self.env_config, reset_on_init=self.reset_on_init)
-            for i in range(self.num_agents)
+            MultiAgentEnvWorker(i,
+                                self.make_env_func,
+                                self.env_config,
+                                reset_on_init=self.reset_on_init) for i in range(self.num_agents)
         ]
 
         init_attempt = 0
@@ -300,7 +310,9 @@ class MultiAgentEnv(gym.Env, RewardShapingInterface):
             else:
                 break
 
-        log.debug('%d agent workers initialized for env %d!', len(self.workers), self.env_config.worker_index)
+        log.debug('%d agent workers initialized for env %d!',
+                  len(self.workers),
+                  self.env_config.worker_index)
         self.initialized = True
 
     @retry_dm(exception_class=Exception, num_attempts=3, sleep_time=1, should_reset=False)

@@ -42,12 +42,20 @@ class ActorState:
     State of a single actor (agent) in a multi-agent environment.
     Single-agent environments are treated as multi-agent with one agent for simplicity.
     """
-
     def __init__(
-        self, cfg, env, worker_idx, split_idx, env_idx, agent_idx,
-        traj_tensors, num_traj_buffers,
-        policy_outputs_info, policy_output_tensors,
-        pbt_reward_shaping, policy_mgr,
+        self,
+        cfg,
+        env,
+        worker_idx,
+        split_idx,
+        env_idx,
+        agent_idx,
+        traj_tensors,
+        num_traj_buffers,
+        policy_outputs_info,
+        policy_output_tensors,
+        pbt_reward_shaping,
+        policy_mgr,
     ):
         self.cfg = cfg
         self.env = env
@@ -94,7 +102,8 @@ class ActorState:
         if isinstance(env.action_space, (Discrete, Discretized)):
             self.integer_actions = True
         if isinstance(env.action_space, Tuple):
-            all_subspaces_discrete = all(isinstance(s, (Discrete, Discretized)) for s in env.action_space.spaces)
+            all_subspaces_discrete = all(
+                isinstance(s, (Discrete, Discretized)) for s in env.action_space.spaces)
             if all_subspaces_discrete:
                 self.integer_actions = True
             else:
@@ -120,8 +129,11 @@ class ActorState:
         self._reset_rnn_state()
 
         if self.cfg.with_pbt and self.pbt_reward_shaping[self.curr_policy_id] is not None:
-            set_reward_shaping(self.env, self.pbt_reward_shaping[self.curr_policy_id], self.agent_idx)
-            set_training_info(self.env_training_info_interface, self.approx_env_steps.get(self.curr_policy_id, 0))
+            set_reward_shaping(self.env,
+                               self.pbt_reward_shaping[self.curr_policy_id],
+                               self.agent_idx)
+            set_training_info(self.env_training_info_interface,
+                              self.approx_env_steps.get(self.curr_policy_id, 0))
 
     def set_trajectory_data(self, data, traj_buffer_idx, rollout_step):
         """
@@ -178,7 +190,8 @@ class ActorState:
             self.last_episode_true_reward = info.get('true_reward', self.last_episode_reward)
             self.last_episode_extra_stats = info.get('episode_extra_stats', dict())
 
-            set_training_info(self.env_training_info_interface, self.approx_env_steps.get(self.curr_policy_id, 0))
+            set_training_info(self.env_training_info_interface,
+                              self.approx_env_steps.get(self.curr_policy_id, 0))
 
     def finalize_trajectory(self, rollout_step):
         """
@@ -200,7 +213,10 @@ class ActorState:
 
         t_id = f'{self.curr_policy_id}_{self.worker_idx}_{self.split_idx}_{self.env_idx}_{self.agent_idx}_{self.num_trajectories}'
         traj_dict = dict(
-            t_id=t_id, length=rollout_step, env_steps=self.rollout_env_steps, policy_id=self.curr_policy_id,
+            t_id=t_id,
+            length=rollout_step,
+            env_steps=self.rollout_env_steps,
+            policy_id=self.curr_policy_id,
         )
 
         self.num_trajectories += 1
@@ -250,8 +266,14 @@ class VectorEnvRunner:
     this type of inefficiency anyway. The worker is probably still rendering a previous vector of envs when
     the actions arrive.
     """
-
-    def __init__(self, cfg, num_envs, worker_idx, split_idx, num_agents, shared_buffers, pbt_reward_shaping):
+    def __init__(self,
+                 cfg,
+                 num_envs,
+                 worker_idx,
+                 split_idx,
+                 num_agents,
+                 shared_buffers,
+                 pbt_reward_shaping):
         """
         Ctor.
 
@@ -304,7 +326,9 @@ class VectorEnvRunner:
             env_id = self.worker_idx * self.cfg.num_envs_per_worker + vector_idx
 
             env_config = AttrDict(
-                worker_index=self.worker_idx, vector_index=vector_idx, env_id=env_id,
+                worker_index=self.worker_idx,
+                vector_index=vector_idx,
+                env_id=env_id,
             )
 
             # log.info('Creating env %r... %d-%d-%d', env_config, self.worker_idx, self.split_idx, env_i)
@@ -317,10 +341,18 @@ class VectorEnvRunner:
             for agent_idx in range(self.num_agents):
                 agent_traj_tensors = self.traj_tensors.index((env_i, agent_idx))
                 actor_state = ActorState(
-                    self.cfg, env, self.worker_idx, self.split_idx, env_i, agent_idx,
-                    agent_traj_tensors, self.num_traj_buffers,
-                    self.policy_outputs, self.policy_output_tensors[env_i, agent_idx],
-                    self.pbt_reward_shaping, self.policy_mgr,
+                    self.cfg,
+                    env,
+                    self.worker_idx,
+                    self.split_idx,
+                    env_i,
+                    agent_idx,
+                    agent_traj_tensors,
+                    self.num_traj_buffers,
+                    self.policy_outputs,
+                    self.policy_output_tensors[env_i, agent_idx],
+                    self.pbt_reward_shaping,
+                    self.policy_mgr,
                 )
                 actor_states_env.append(actor_state)
                 episode_rewards_env.append(0.0)
@@ -371,7 +403,9 @@ class VectorEnvRunner:
                             policy_outputs_dict[name] = policy_outputs[tensor_idx]
 
                     # save parsed trajectory outputs directly into the trajectory buffer
-                    actor_state.set_trajectory_data(policy_outputs_dict, self.traj_buffer_idx, self.rollout_step)
+                    actor_state.set_trajectory_data(policy_outputs_dict,
+                                                    self.traj_buffer_idx,
+                                                    self.rollout_step)
                     actor_state.last_actions = policy_outputs_dict['actions']
 
                     # this is an rnn state for the next iteration in the rollout
@@ -418,7 +452,11 @@ class VectorEnvRunner:
             actor_state = env_actor_states[agent_i]
 
             actor_state.record_env_step(
-                rewards[agent_i], dones[agent_i], infos[agent_i], self.traj_buffer_idx, self.rollout_step,
+                rewards[agent_i],
+                dones[agent_i],
+                infos[agent_i],
+                self.traj_buffer_idx,
+                self.rollout_step,
             )
 
             actor_state.last_obs = new_obs[agent_i]
@@ -489,8 +527,11 @@ class VectorEnvRunner:
                 actor_state.ready = False
 
                 # populate policy inputs in shared memory
-                policy_inputs = dict(obs=actor_state.last_obs, rnn_states=actor_state.last_rnn_state)
-                actor_state.set_trajectory_data(policy_inputs, self.traj_buffer_idx, self.rollout_step)
+                policy_inputs = dict(obs=actor_state.last_obs,
+                                     rnn_states=actor_state.last_rnn_state)
+                actor_state.set_trajectory_data(policy_inputs,
+                                                self.traj_buffer_idx,
+                                                self.rollout_step)
 
     def reset(self, report_queue):
         """
@@ -507,7 +548,8 @@ class VectorEnvRunner:
 
             if self.cfg.decorrelate_envs_on_one_worker:
                 env_i_split = self.num_envs * self.split_idx + env_i
-                decorrelate_steps = self.cfg.rollout * env_i_split + self.cfg.rollout * random.randint(0, 4)
+                decorrelate_steps = self.cfg.rollout * env_i_split + self.cfg.rollout * random.randint(
+                    0, 4)
 
                 log.info('Decorrelating experience for %d frames...', decorrelate_steps)
                 for decorrelate_step in range(decorrelate_steps):
@@ -516,14 +558,18 @@ class VectorEnvRunner:
 
             for agent_i, obs in enumerate(observations):
                 actor_state = self.actor_states[env_i][agent_i]
-                actor_state.set_trajectory_data(dict(obs=obs), self.traj_buffer_idx, self.rollout_step)
+                actor_state.set_trajectory_data(dict(obs=obs),
+                                                self.traj_buffer_idx,
+                                                self.rollout_step)
                 # rnn state is already initialized at zero
 
             # log.debug(
             #     'Reset progress w:%d-%d finished %d/%d, still initializing envs...',
             #     self.worker_idx, self.split_idx, env_i + 1, len(self.envs),
             # )
-            safe_put(report_queue, dict(initialized_env=(self.worker_idx, self.split_idx, env_i)), queue_name='report')
+            safe_put(report_queue,
+                     dict(initialized_env=(self.worker_idx, self.split_idx, env_i)),
+                     queue_name='report')
 
         policy_request = self._format_policy_request()
         return policy_request
@@ -588,7 +634,9 @@ class VectorEnvRunner:
             if print_warning:
                 log.warning(
                     'Waiting for trajectory buffer %d on actor %d-%d',
-                    self.traj_buffer_idx, self.worker_idx, self.split_idx,
+                    self.traj_buffer_idx,
+                    self.worker_idx,
+                    self.split_idx,
                 )
                 print_warning = False
             time.sleep(0.002)
@@ -615,10 +663,18 @@ class ActorWorker:
     This is somewhat similar to double-buffered rendering in computer graphics.
 
     """
-
     def __init__(
-        self, cfg, obs_space, action_space, num_agents, worker_idx, shared_buffers,
-        task_queue, policy_queues, report_queue, learner_queues,
+        self,
+        cfg,
+        obs_space,
+        action_space,
+        num_agents,
+        worker_idx,
+        shared_buffers,
+        task_queue,
+        policy_queues,
+        report_queue,
+        learner_queues,
     ):
         """
         Ctor.
@@ -688,8 +744,13 @@ class ActorWorker:
         self.env_runners = []
         for split_idx in range(self.num_splits):
             env_runner = VectorEnvRunner(
-                self.cfg, self.vector_size // self.num_splits, self.worker_idx, split_idx, self.num_agents,
-                self.shared_buffers, self.reward_shaping,
+                self.cfg,
+                self.vector_size // self.num_splits,
+                self.worker_idx,
+                split_idx,
+                self.num_agents,
+                self.shared_buffers,
+                self.reward_shaping,
             )
             env_runner.init()
             self.env_runners.append(env_runner)
@@ -725,8 +786,10 @@ class ActorWorker:
             policy_id = rollout['policy_id']
             if policy_id not in rollouts_per_policy:
                 rollouts_per_policy[policy_id] = dict(
-                    rollouts=[], worker_idx=self.worker_idx,
-                    split_idx=split_idx, traj_buffer_idx=traj_buffer_idx,
+                    rollouts=[],
+                    worker_idx=self.worker_idx,
+                    split_idx=split_idx,
+                    traj_buffer_idx=traj_buffer_idx,
                 )
 
             rollouts_per_policy[policy_id]['rollouts'].append(rollout)
@@ -773,10 +836,12 @@ class ActorWorker:
                 if self.num_complete_rollouts == 0 and not self.cfg.benchmark:
                     # we just finished our first complete rollouts, perfect time to wait for experience derorrelation
                     # this guarantees that there won't be any "old" trajectories when we awaken
-                    delay = (float(self.worker_idx) / self.cfg.num_workers) * self.cfg.decorrelate_experience_max_seconds
+                    delay = (float(self.worker_idx) /
+                             self.cfg.num_workers) * self.cfg.decorrelate_experience_max_seconds
                     log.info(
                         'Worker %d, sleep for %.3f sec to decorrelate experience collection',
-                        self.worker_idx, delay,
+                        self.worker_idx,
+                        delay,
                     )
                     time.sleep(delay)
                     log.info('Worker %d awakens!', self.worker_idx)
@@ -813,7 +878,9 @@ class ActorWorker:
         if self.cfg.actor_worker_gpus:
             set_gpus_for_process(
                 self.worker_idx,
-                num_gpus_per_process=1, process_type='actor', gpu_mask=self.cfg.actor_worker_gpus,
+                num_gpus_per_process=1,
+                process_type='actor',
+                gpu_mask=self.cfg.actor_worker_gpus,
             )
 
         torch.multiprocessing.set_sharing_strategy('file_system')
@@ -858,17 +925,24 @@ class ActorWorker:
                                 env.update_env_steps(data)
 
                     if time.time() - last_report > 5.0 and 'one_step' in timing:
-                        timing_stats = dict(wait_actor=timing.wait_actor, step_actor=timing.one_step)
+                        timing_stats = dict(wait_actor=timing.wait_actor,
+                                            step_actor=timing.one_step)
                         memory_mb = memory_consumption_mb()
                         stats = dict(memory_actor=memory_mb)
-                        safe_put(self.report_queue, dict(timing=timing_stats, stats=stats), queue_name='report')
+                        safe_put(self.report_queue,
+                                 dict(timing=timing_stats, stats=stats),
+                                 queue_name='report')
                         last_report = time.time()
 
                 except RuntimeError as exc:
-                    log.warning('Error while processing data w: %d, exception: %s', self.worker_idx, exc)
+                    log.warning('Error while processing data w: %d, exception: %s',
+                                self.worker_idx,
+                                exc)
                     log.warning('Terminate process...')
                     self.terminate = True
-                    safe_put(self.report_queue, dict(critical_error=self.worker_idx), queue_name='report')
+                    safe_put(self.report_queue,
+                             dict(critical_error=self.worker_idx),
+                             queue_name='report')
                 except KeyboardInterrupt:
                     self.terminate = True
                 except:
@@ -879,7 +953,10 @@ class ActorWorker:
             time.sleep(0.1)
             log.info(
                 'Env runner %d, CPU aff. %r, rollouts %d: timing %s',
-                self.worker_idx, psutil.Process().cpu_affinity(), self.num_complete_rollouts, timing,
+                self.worker_idx,
+                psutil.Process().cpu_affinity(),
+                self.num_complete_rollouts,
+                timing,
             )
 
     def init(self):

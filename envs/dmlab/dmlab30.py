@@ -1,10 +1,8 @@
 import collections
 
-
 DMLAB_INSTRUCTIONS = 'INSTR'
 DMLAB_VOCABULARY_SIZE = 1000
 DMLAB_MAX_INSTRUCTION_LEN = 16
-
 
 LEVEL_MAPPING = collections.OrderedDict([
     ('rooms_collect_good_objects_train', 'rooms_collect_good_objects_test'),
@@ -40,7 +38,6 @@ LEVEL_MAPPING = collections.OrderedDict([
 ])
 
 DMLAB30_LEVELS = tuple(LEVEL_MAPPING.keys())
-
 
 HUMAN_SCORES = {
     'rooms_collect_good_objects_test': 10,
@@ -140,7 +137,6 @@ RANDOM_POLICY_EPISODE_LEN = {
     'explore_object_rewards_few': 5400,
     'explore_object_rewards_many': 7200,
 }
-
 
 # this is how many episodes are required for one billion frames of training on DMLab-30
 # Used for level cache generation. Only levels that require level cache generation are listed.

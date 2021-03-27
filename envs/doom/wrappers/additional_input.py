@@ -6,7 +6,6 @@ from envs.doom.wrappers.reward_shaping import NUM_WEAPONS
 
 class DoomAdditionalInput(gym.Wrapper):
     """Add game variables to the observation space + reward shaping."""
-
     def __init__(self, env):
         super().__init__(env)
         current_obs_space = self.observation_space
@@ -22,10 +21,13 @@ class DoomAdditionalInput(gym.Wrapper):
         high = [20.0, 50.0, 50.0, 50.0, 50.0, 1.0, 10.0] + weapons_high + ammo_high
 
         self.observation_space = gym.spaces.Dict({
-            'obs': current_obs_space,
-            'measurements': gym.spaces.Box(
-                low=np.array(low, dtype=np.float32), high=np.array(high, dtype=np.float32),
-            ),
+            'obs':
+                current_obs_space,
+            'measurements':
+                gym.spaces.Box(
+                    low=np.array(low, dtype=np.float32),
+                    high=np.array(high, dtype=np.float32),
+                ),
         })
 
         num_measurements = len(low)
@@ -47,7 +49,8 @@ class DoomAdditionalInput(gym.Wrapper):
         info['HEALTH'] = max(0.0, info.get('HEALTH', 0.0))
         health = info.get('HEALTH', 0.0) / 30.0
         armor = info.get('ARMOR', 0.0) / 30.0
-        kills = info.get('USER2', 0.0) / 10.0  # only works in battle and battle2, this is not really useful
+        kills = info.get('USER2',
+                         0.0) / 10.0  # only works in battle and battle2, this is not really useful
         attack_ready = info.get('ATTACK_READY', 0.0)
         num_players = info.get('PLAYER_COUNT', 1) / 5.0
 

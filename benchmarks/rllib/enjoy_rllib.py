@@ -40,14 +40,16 @@ def create_parser_custom():
         '--num-agents',
         default=-1,
         type=int,
-        help='Allows to set number of agents less than number of players, to allow humans to join the match'
-             'Default value (-1) means number of agents is the same as max number of players',
+        help=
+        'Allows to set number of agents less than number of players, to allow humans to join the match'
+        'Default value (-1) means number of agents is the same as max number of players',
     )
     parser.add_argument(
         '--num-bots',
         default=-1,
         type=int,
-        help='Add classic (non-neural) bots to the match. If default (-1) then use number of bots specified in env cfg',
+        help=
+        'Add classic (non-neural) bots to the match. If default (-1) then use number of bots specified in env cfg',
     )
     parser.add_argument(
         '--num-humans',
@@ -60,7 +62,7 @@ def create_parser_custom():
         default=0,
         type=int,
         help='Enable sync mode with adjustable FPS.'
-             'Default (0) means default Doom FPS (~35). Leave at 0 for multiplayer',
+        'Default (0) means default Doom FPS (~35). Leave at 0 for multiplayer',
     )
     parser.add_argument(
         '--bot-difficulty',
@@ -72,13 +74,15 @@ def create_parser_custom():
         '--env-frameskip',
         default=1,
         type=int,
-        help='Usually frameskip is handled by the rollout loop for smooth rendering, but this is also an option',
+        help=
+        'Usually frameskip is handled by the rollout loop for smooth rendering, but this is also an option',
     )
     parser.add_argument(
         '--render-action-repeat',
         default=-1,
         type=int,
-        help='Repeat an action that many frames during rollout. -1 (default) means read from env config',
+        help=
+        'Repeat an action that many frames during rollout. -1 (default) means read from env config',
     )
     parser.add_argument(
         '--record-to',
@@ -91,7 +95,7 @@ def create_parser_custom():
         default=None,
         type=str,
         help='Custom resolution string (e.g. 1920x1080).'
-             'Can affect performance of the model if does not match the resolution the model was trained on!',
+        'Can affect performance of the model if does not match the resolution the model was trained on!',
     )
     return parser
 
@@ -119,8 +123,11 @@ def run(args, config):
     rollout_loop(
         agent,
         args.env,
-        num_steps, num_episodes=args.num_episodes,
-        no_render=args.no_render, fps=args.fps, frameskip=render_frameskip,
+        num_steps,
+        num_episodes=args.num_episodes,
+        no_render=args.no_render,
+        fps=args.fps,
+        frameskip=render_frameskip,
     )
 
 
@@ -141,10 +148,7 @@ def rollout_loop(agent, env_name, num_steps, num_episodes, no_render=True, fps=1
         policy_map = agent.workers.local_worker().policy_map
         state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
         use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
-        action_init = {
-            p: m.action_space.sample()
-            for p, m in policy_map.items()
-        }
+        action_init = {p: m.action_space.sample() for p, m in policy_map.items()}
     else:
         env = gym.make(env_name)
         multiagent = False
@@ -158,10 +162,8 @@ def rollout_loop(agent, env_name, num_steps, num_episodes, no_render=True, fps=1
     while steps < (num_steps or steps + 1) and full_episodes < num_episodes:
         mapping_cache = {}  # in case policy_agent_mapping is stochastic
         obs = env.reset()
-        agent_states = DefaultMapping(
-            lambda agent_id_: state_init[mapping_cache[agent_id_]])
-        prev_actions = DefaultMapping(
-            lambda agent_id_: action_init[mapping_cache[agent_id_]])
+        agent_states = DefaultMapping(lambda agent_id_: state_init[mapping_cache[agent_id_]])
+        prev_actions = DefaultMapping(lambda agent_id_: action_init[mapping_cache[agent_id_]])
         prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
         reward_episode = 0.0
@@ -171,8 +173,7 @@ def rollout_loop(agent, env_name, num_steps, num_episodes, no_render=True, fps=1
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
-                    policy_id = mapping_cache.setdefault(
-                        agent_id, policy_agent_mapping(agent_id))
+                    policy_id = mapping_cache.setdefault(agent_id, policy_agent_mapping(agent_id))
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
                         a_action, p_state, _ = agent.compute_action(
@@ -183,11 +184,10 @@ def rollout_loop(agent, env_name, num_steps, num_episodes, no_render=True, fps=1
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
                     else:
-                        a_action = agent.compute_action(
-                            a_obs,
-                            prev_action=prev_actions[agent_id],
-                            prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
+                        a_action = agent.compute_action(a_obs,
+                                                        prev_action=prev_actions[agent_id],
+                                                        prev_reward=prev_rewards[agent_id],
+                                                        policy_id=policy_id)
 
                     if isinstance(env.action_space, gym.spaces.Tuple):
                         a_action = TupleActions(a_action)
@@ -264,9 +264,8 @@ def main():
         config_path = os.path.join(config_dir, "../params.pkl")
     if not os.path.exists(config_path):
         if not args.config:
-            raise ValueError(
-                "Could not find params.pkl in either the checkpoint dir or "
-                "its parent directory.")
+            raise ValueError("Could not find params.pkl in either the checkpoint dir or "
+                             "its parent directory.")
     else:
         with open(config_path, "rb") as f:
             config = pickle.load(f)
@@ -293,8 +292,11 @@ def main():
     custom_resolution = args.custom_res
 
     register_doom_envs_rllib(
-        async_mode=async_mode, skip_frames=skip_frames,
-        num_agents=args.num_agents, num_bots=args.num_bots, num_humans=args.num_humans,
+        async_mode=async_mode,
+        skip_frames=skip_frames,
+        num_agents=args.num_agents,
+        num_bots=args.num_bots,
+        num_humans=args.num_humans,
         bot_difficulty=bot_difficulty,
         record_to=record_to,
         custom_resolution=custom_resolution,

@@ -22,4 +22,3 @@ class TestMinigrid(TestCase):
             total_rew += rew
             if done:
                 env.reset()
-

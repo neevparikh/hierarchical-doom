@@ -11,7 +11,6 @@ class PolicyManager:
     Methods of this class can potentially be overloaded to provide a more clever mapping, e.g. we can minimize the
     number of different policies per rollout worker thus minimizing the amount of communication required.
     """
-
     def __init__(self, cfg, num_agents):
         self.rng = np.random.RandomState(seed=random.randint(0, 2**32 - 1))
 

@@ -45,7 +45,8 @@ class TestPackedSequences(TestCase):
             norm = torch.norm(packed_out - loopy_out)
             print(norm)
             self.assertLess(norm, 2e-6)
-            self.assertTrue(np.allclose(packed_out.detach().numpy(), loopy_out.detach().numpy(), atol=2e-6))
+            self.assertTrue(
+                np.allclose(packed_out.detach().numpy(), loopy_out.detach().numpy(), atol=2e-6))
 
     def test_full(self):
         T = 37  # recurrence, bptt
@@ -60,4 +61,3 @@ class TestPackedSequences(TestCase):
         D = 1  # RNN cell size (hidden state size)
         self.check_packed_version_matching_loopy_version(T, N, D, True)
         self.check_packed_version_matching_loopy_version(T, N, D, False)
-

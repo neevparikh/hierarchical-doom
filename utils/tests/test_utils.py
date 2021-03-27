@@ -23,5 +23,3 @@ class TestUtils(TestCase):
                 self.assertEqual(cores, [10, 11, 12, 13, 14])
             elif i == 43:
                 self.assertEqual(cores, [15, 16, 17, 18, 19])
-
-

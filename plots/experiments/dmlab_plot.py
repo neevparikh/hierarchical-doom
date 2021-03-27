@@ -15,27 +15,44 @@ from utils.utils import log, ensure_dir_exists
 
 set_matplotlib_params()
 
-plt.rcParams['figure.figsize'] = (4, 2.8) #(2.5, 2.0) 7.5， 4
-
+plt.rcParams['figure.figsize'] = (4, 2.8)  #(2.5, 2.0) 7.5， 4
 
 B = int(1e9)
 
 EXPERIMENTS = {
-    'dmlab30': dict(is_pbt=True, dir='dmlab_30_resnet_4pbt_mode2_90_12_v86', key='_dmlab/000_capped_mean_human_norm_score', x_ticks=[0, 2*B, 4*B, 6*B, 8*B, 10*B], max_x=10*B, y_ticks=[0, 10, 20, 30, 40, 50, 60, 70], x_label='Env. frames, skip=4', title='DMLab-30', baselines=((52, 'DeepMind IMPALA'),), legend='Population mean'),
+    'dmlab30':
+        dict(is_pbt=True,
+             dir='dmlab_30_resnet_4pbt_mode2_90_12_v86',
+             key='_dmlab/000_capped_mean_human_norm_score',
+             x_ticks=[0, 2 * B, 4 * B, 6 * B, 8 * B, 10 * B],
+             max_x=10 * B,
+             y_ticks=[0, 10, 20, 30, 40, 50, 60, 70],
+             x_label='Env. frames, skip=4',
+             title='DMLab-30',
+             baselines=((52, 'DeepMind IMPALA'),),
+             legend='Population mean'),
 }
+
 
 def extract(env, experiments):
     # scalar_accumulators = [EventAccumulator(str(dpath / dname / subpath)).Reload().scalars
     #                        for dname in os.listdir(dpath) if dname != FOLDER_NAME and dname in hide_file]
 
-    scalar_accumulators = [EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments]
+    scalar_accumulators = [
+        EventAccumulator(experiment_dir).Reload().scalars for experiment_dir in experiments
+    ]
 
     # Filter non event files
-    scalar_accumulators = [scalar_accumulator for scalar_accumulator in scalar_accumulators if scalar_accumulator.Keys()]
+    scalar_accumulators = [
+        scalar_accumulator for scalar_accumulator in scalar_accumulators
+        if scalar_accumulator.Keys()
+    ]
 
     # Get and validate all scalar keys
     # zhehui sorted(scalar_accumulator.Keys())
-    all_keys = [tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators]
+    all_keys = [
+        tuple(sorted(scalar_accumulator.Keys())) for scalar_accumulator in scalar_accumulators
+    ]
     # assert len(set(all_keys)) == 1, "All runs need to have the same scalar keys. There are mismatches in {}".format(all_keys)
     keys = all_keys[0]
 
@@ -49,7 +66,9 @@ def extract(env, experiments):
 
     keys = [key for key in keys if all_accumulators_have_this_key(key)]
 
-    all_scalar_events_per_key = [[scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators] for key in keys]
+    all_scalar_events_per_key = [[
+        scalar_accumulator.Items(key) for scalar_accumulator in scalar_accumulators
+    ] for key in keys]
 
     # zhehui
     # import linear interpolation
@@ -58,7 +77,11 @@ def extract(env, experiments):
     # modify_all_steps_per_key = tuple(int(step_id*1e6) for step_id in range(1, int(1e8/1e6 + 1)))
     plot_step = int(5e7)
     max_x = EXPERIMENTS[env]['max_x']
-    all_steps_per_key = [[tuple(int(step_id) for step_id in range(0, max_x, plot_step)) for scalar_events in sorted(all_scalar_events)]
+    all_steps_per_key = [[
+        tuple(int(step_id)
+              for step_id in range(0, max_x, plot_step))
+        for scalar_events in sorted(all_scalar_events)
+    ]
                          for all_scalar_events in all_scalar_events_per_key]
 
     for i, all_steps in enumerate(all_steps_per_key):
@@ -72,11 +95,15 @@ def extract(env, experiments):
     #                       for all_scalar_events in all_scalar_events_per_key]
 
     # Get values per step per key
-    values_per_key = [[[scalar_event.value for scalar_event in scalar_events] for scalar_events in all_scalar_events]
+    values_per_key = [[[scalar_event.value
+                        for scalar_event in scalar_events]
+                       for scalar_events in all_scalar_events]
                       for all_scalar_events in all_scalar_events_per_key]
 
-    x_per_key = [[[scalar_event.step for scalar_event in scalar_events] for scalar_events in all_scalar_events]
-                      for all_scalar_events in all_scalar_events_per_key]
+    x_per_key = [[[scalar_event.step
+                   for scalar_event in scalar_events]
+                  for scalar_events in all_scalar_events]
+                 for all_scalar_events in all_scalar_events_per_key]
 
     true_reward_key = EXPERIMENTS[env]['key']
     key_idx = keys.index(true_reward_key)
@@ -98,7 +125,10 @@ def extract(env, experiments):
 
     min_length = len(x_ticks)
     for i in range(len(values)):
-        log.debug('Values for seed %d truncated from %d to %d', i, len(interpolated_y[i]), min_length)
+        log.debug('Values for seed %d truncated from %d to %d',
+                  i,
+                  len(interpolated_y[i]),
+                  min_length)
         interpolated_y[i] = interpolated_y[i][:min_length]
 
     interpolated_keys = dict()
@@ -208,10 +238,21 @@ def plot(env, key, interpolated_key, ax, count):
     green = '#2CA02C'
 
     sf_plot, = ax.plot(x, y_mean, color=blue, label=EXPERIMENTS[env]['legend'], linewidth=lw, antialiased=True)
-    ax.fill_between(x, y_minus_std, y_plus_std, color=blue, alpha=0.25, antialiased=True, linewidth=0.0)
+    ax.fill_between(x,
+                    y_minus_std,
+                    y_plus_std,
+                    color=blue,
+                    alpha=0.25,
+                    antialiased=True,
+                    linewidth=0.0)
 
     if EXPERIMENTS[env]['is_pbt']:
-        ax.plot(x, y_max, color='#d62728', label='Population best', linewidth=lw_max, antialiased=True)
+        ax.plot(x,
+                y_max,
+                color='#d62728',
+                label='Population best',
+                linewidth=lw_max,
+                antialiased=True)
 
     if 'baselines' in EXPERIMENTS[env]:
         colors = [green, orange]
@@ -220,7 +261,12 @@ def plot(env, key, interpolated_key, ax, count):
         for baseline_i, baseline in enumerate(baselines):
             baseline_color = colors[baseline_i]
             baseline_y, baseline_name = baseline
-            ax.plot([x[0], x[-1]], [baseline_y, baseline_y], color=baseline_color, label=baseline_name, linewidth=lw_baseline, antialiased=True, linestyle='--')
+            ax.plot([x[0], x[-1]], [baseline_y, baseline_y],
+                    color=baseline_color,
+                    label=baseline_name,
+                    linewidth=lw_baseline,
+                    antialiased=True,
+                    linestyle='--')
 
     ax.legend(prop={'size': 6}, loc='lower right')
 
@@ -283,7 +329,12 @@ def main():
 
         plt.margins(0, 0)
         plot_name = f'dmlab30'
-        plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_inches='tight', pad_inches=0, )
+        plt.savefig(
+            os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'),
+            format='pdf',
+            bbox_inches='tight',
+            pad_inches=0,
+        )
         # plt.savefig(os.path.join(os.getcwd(), f'../final_plots/reward_{plot_name}.pdf'), format='pdf', bbox_extra_artists=(lgd,))
 
     return 0

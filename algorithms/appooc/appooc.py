@@ -44,197 +44,417 @@ if os.name == 'nt':
 else:
     from faster_fifo import Queue as MpQueue
 
-
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 class APPOOC(ReinforcementLearningAlgorithm):
     """Async PPO - Option Critic."""
-
     @classmethod
     def add_cli_args(cls, parser):
         p = parser
         super().add_cli_args(p)
-        p.add_argument('--experiment_summaries_interval', default=20, type=int, help='How often in seconds we write avg. statistics about the experiment (reward, episode length, extra stats...)')
-
-        p.add_argument('--adam_eps', default=1e-6, type=float, help='Adam epsilon parameter (1e-8 to 1e-5 seem to reliably work okay, 1e-3 and up does not work)')
-        p.add_argument('--adam_beta1', default=0.9, type=float, help='Adam momentum decay coefficient')
-        p.add_argument('--adam_beta2', default=0.999, type=float, help='Adam second momentum decay coefficient')
-
-        p.add_argument('--gae_lambda', default=0.95, type=float, help='Generalized Advantage Estimation discounting (only used when V-trace is False')
+        p.add_argument(
+            '--experiment_summaries_interval',
+            default=20,
+            type=int,
+            help=
+            'How often in seconds we write avg. statistics about the experiment (reward, episode length, extra stats...)'
+        )
 
         p.add_argument(
-            '--rollout', default=32, type=int,
+            '--adam_eps',
+            default=1e-6,
+            type=float,
+            help=
+            'Adam epsilon parameter (1e-8 to 1e-5 seem to reliably work okay, 1e-3 and up does not work)'
+        )
+        p.add_argument('--adam_beta1',
+                       default=0.9,
+                       type=float,
+                       help='Adam momentum decay coefficient')
+        p.add_argument('--adam_beta2',
+                       default=0.999,
+                       type=float,
+                       help='Adam second momentum decay coefficient')
+
+        p.add_argument(
+            '--gae_lambda',
+            default=0.95,
+            type=float,
+            help='Generalized Advantage Estimation discounting (only used when V-trace is False')
+
+        p.add_argument(
+            '--rollout',
+            default=32,
+            type=int,
             help='Length of the rollout from each environment in timesteps.'
-                 'Once we collect this many timesteps on actor worker, we send this trajectory to the learner.'
-                 'The length of the rollout will determine how many timesteps are used to calculate bootstrapped'
-                 'Monte-Carlo estimates of discounted rewards, advantages, GAE, or V-trace targets. Shorter rollouts'
-                 'reduce variance, but the estimates are less precise (bias vs variance tradeoff).'
-                 'For RNN policies, this should be a multiple of --recurrence, so every rollout will be split'
-                 'into (n = rollout / recurrence) segments for backpropagation. V-trace algorithm currently requires that'
-                 'rollout == recurrence, which what you want most of the time anyway.'
-                 'Rollout length is independent from the episode length. Episode length can be both shorter or longer than'
-                 'rollout, although for PBT training it is currently recommended that rollout << episode_len'
-                 '(see function finalize_trajectory in actor_worker.py)',
+            'Once we collect this many timesteps on actor worker, we send this trajectory to the learner.'
+            'The length of the rollout will determine how many timesteps are used to calculate bootstrapped'
+            'Monte-Carlo estimates of discounted rewards, advantages, GAE, or V-trace targets. Shorter rollouts'
+            'reduce variance, but the estimates are less precise (bias vs variance tradeoff).'
+            'For RNN policies, this should be a multiple of --recurrence, so every rollout will be split'
+            'into (n = rollout / recurrence) segments for backpropagation. V-trace algorithm currently requires that'
+            'rollout == recurrence, which what you want most of the time anyway.'
+            'Rollout length is independent from the episode length. Episode length can be both shorter or longer than'
+            'rollout, although for PBT training it is currently recommended that rollout << episode_len'
+            '(see function finalize_trajectory in actor_worker.py)',
         )
-
-        p.add_argument('--num_workers', default=multiprocessing.cpu_count(), type=int, help='Number of parallel environment workers. Should be less than num_envs and should divide num_envs')
 
         p.add_argument(
-            '--recurrence', default=32, type=int,
-            help='Trajectory length for backpropagation through time. If recurrence=1 there is no backpropagation through time, and experience is shuffled completely randomly'
-                 'For V-trace recurrence should be equal to rollout length.',
+            '--num_workers',
+            default=multiprocessing.cpu_count(),
+            type=int,
+            help=
+            'Number of parallel environment workers. Should be less than num_envs and should divide num_envs'
         )
 
-        p.add_argument('--num_options', default=8, type=int, help='Number of options to use for Option Critic')
-        p.add_argument('--option_epsilon', default=0.1, type=float, help='Option epsilon value for Option Critic')
-        p.add_argument('--use_rnn', default=True, type=str2bool, help='Whether to use RNN core in a policy or not')
-        p.add_argument('--rnn_type', default='gru', choices=['gru', 'lstm'], type=str, help='Type of RNN cell to use if use_rnn is True')
-        p.add_argument('--rnn_num_layers', default=1, type=int, help='Number of RNN layers to use if use_rnn is True')
+        p.add_argument(
+            '--recurrence',
+            default=32,
+            type=int,
+            help=
+            'Trajectory length for backpropagation through time. If recurrence=1 there is no backpropagation through time, and experience is shuffled completely randomly'
+            'For V-trace recurrence should be equal to rollout length.',
+        )
 
-        p.add_argument('--ppo_clip_ratio', default=0.1, type=float, help='We use unbiased clip(x, 1+e, 1/(1+e)) instead of clip(x, 1+e, 1-e) in the paper')
-        p.add_argument('--ppo_clip_value', default=1.0, type=float, help='Maximum absolute change in value estimate until it is clipped. Sensitive to value magnitude')
+        p.add_argument('--num_options',
+                       default=8,
+                       type=int,
+                       help='Number of options to use for Option Critic')
+        p.add_argument('--option_epsilon',
+                       default=0.1,
+                       type=float,
+                       help='Option epsilon value for Option Critic')
+        p.add_argument('--use_rnn',
+                       default=True,
+                       type=str2bool,
+                       help='Whether to use RNN core in a policy or not')
+        p.add_argument('--rnn_type',
+                       default='gru',
+                       choices=['gru', 'lstm'],
+                       type=str,
+                       help='Type of RNN cell to use if use_rnn is True')
+        p.add_argument('--rnn_num_layers',
+                       default=1,
+                       type=int,
+                       help='Number of RNN layers to use if use_rnn is True')
+
+        p.add_argument(
+            '--ppo_clip_ratio',
+            default=0.1,
+            type=float,
+            help='We use unbiased clip(x, 1+e, 1/(1+e)) instead of clip(x, 1+e, 1-e) in the paper')
+        p.add_argument(
+            '--ppo_clip_value',
+            default=1.0,
+            type=float,
+            help=
+            'Maximum absolute change in value estimate until it is clipped. Sensitive to value magnitude'
+        )
         p.add_argument('--batch_size', default=1024, type=int, help='Minibatch size for SGD')
         p.add_argument(
-            '--num_batches_per_iteration', default=1, type=int,
-            help='How many minibatches we collect before training on the collected experience. It is generally recommended to set this to 1 for most experiments, because any higher value will increase the policy lag.'
-                 'But in some specific circumstances it can be beneficial to have a larger macro-batch in order to shuffle and decorrelate the minibatches.'
-                 'Here and throughout the codebase: macro batch is the portion of experience that learner processes per iteration (consisting of 1 or several minibatches)',
+            '--num_batches_per_iteration',
+            default=1,
+            type=int,
+            help=
+            'How many minibatches we collect before training on the collected experience. It is generally recommended to set this to 1 for most experiments, because any higher value will increase the policy lag.'
+            'But in some specific circumstances it can be beneficial to have a larger macro-batch in order to shuffle and decorrelate the minibatches.'
+            'Here and throughout the codebase: macro batch is the portion of experience that learner processes per iteration (consisting of 1 or several minibatches)',
         )
-        p.add_argument('--ppo_epochs', default=1, type=int, help='Number of training epochs before a new batch of experience is collected')
+        p.add_argument(
+            '--ppo_epochs',
+            default=1,
+            type=int,
+            help='Number of training epochs before a new batch of experience is collected')
 
         p.add_argument(
-            '--num_minibatches_to_accumulate', default=-1, type=int,
-            help='This parameter governs the maximum number of minibatches the learner can accumulate before further experience collection is stopped.'
-                 'The default value (-1) will set this to 2 * num_batches_per_iteration, so if the experience collection is faster than the training,'
-                 'the learner will accumulate enough minibatches for 2 iterations of training (but no more). This is a good balance between policy-lag and throughput.'
-                 'When the limit is reached, the learner will notify the actor workers that they ought to stop the experience collection until accumulated minibatches'
-                 'are processed. Set this parameter to 1 * num_batches_per_iteration to further reduce policy-lag.' 
-                 'If the experience collection is very non-uniform, increasing this parameter can increase overall throughput, at the cost of increased policy-lag.'
-                 'A value of 0 is treated specially. This means the experience accumulation is turned off, and all experience collection will be halted during training.'
-                 'This is the regime with potentially lowest policy-lag.'
-                 'When this parameter is 0 and num_workers * num_envs_per_worker * rollout == num_batches_per_iteration * batch_size, the algorithm is similar to'
-                 'regular synchronous PPO.',
+            '--num_minibatches_to_accumulate',
+            default=-1,
+            type=int,
+            help=
+            'This parameter governs the maximum number of minibatches the learner can accumulate before further experience collection is stopped.'
+            'The default value (-1) will set this to 2 * num_batches_per_iteration, so if the experience collection is faster than the training,'
+            'the learner will accumulate enough minibatches for 2 iterations of training (but no more). This is a good balance between policy-lag and throughput.'
+            'When the limit is reached, the learner will notify the actor workers that they ought to stop the experience collection until accumulated minibatches'
+            'are processed. Set this parameter to 1 * num_batches_per_iteration to further reduce policy-lag.'
+            'If the experience collection is very non-uniform, increasing this parameter can increase overall throughput, at the cost of increased policy-lag.'
+            'A value of 0 is treated specially. This means the experience accumulation is turned off, and all experience collection will be halted during training.'
+            'This is the regime with potentially lowest policy-lag.'
+            'When this parameter is 0 and num_workers * num_envs_per_worker * rollout == num_batches_per_iteration * batch_size, the algorithm is similar to'
+            'regular synchronous PPO.',
         )
 
-        p.add_argument('--max_grad_norm', default=4.0, type=float, help='Max L2 norm of the gradient vector')
+        p.add_argument('--max_grad_norm',
+                       default=4.0,
+                       type=float,
+                       help='Max L2 norm of the gradient vector')
 
         # components of the loss function
-        p.add_argument('--exploration_loss_coeff', default=0.003, type=float,
+        p.add_argument('--exploration_loss_coeff',
+                       default=0.003,
+                       type=float,
                        help='Coefficient for the exploration component of the loss function.')
-        p.add_argument('--value_loss_coeff', default=0.5, type=float, help='Coefficient for the critic loss')
-        p.add_argument('--termination_loss_coeff', default=1.0, type=float, help='Coefficient for the termination loss')
-        p.add_argument('--deliberation_cost', default=0.0, type=float, help='Coefficient for the termination loss')
-        p.add_argument('--exploration_loss', default='entropy', type=str, choices=['entropy', 'symmetric_kl'],
-                       help='Usually the exploration loss is based on maximizing the entropy of the probability'
-                            ' distribution. Note that mathematically maximizing entropy of the categorical probability '
-                            'distribution is exactly the same as minimizing the (regular) KL-divergence between'
-                            ' this distribution and a uniform prior. The downside of using the entropy term '
-                            '(or regular asymmetric KL-divergence) is the fact that penalty does not increase as '
-                            'probabilities of some actions approach zero. I.e. numerically, there is almost '
-                            'no difference between an action distribution with a probability epsilon > 0 for '
-                            'some action and an action distribution with a probability = zero for this action.'
-                            ' For many tasks the first (epsilon) distribution is preferrable because we keep some '
-                            '(albeit small) amount of exploration, while the second distribution will never explore '
-                            'this action ever again.'
-                            'Unlike the entropy term, symmetric KL divergence between the action distribution '
-                            'and a uniform prior approaches infinity when entropy of the distribution approaches zero,'
-                            ' so it can prevent the pathological situations where the agent stops exploring. '
-                            'Empirically, symmetric KL-divergence yielded slightly better results on some problems.',
-                       )
+        p.add_argument('--value_loss_coeff',
+                       default=0.5,
+                       type=float,
+                       help='Coefficient for the critic loss')
+        p.add_argument('--termination_loss_coeff',
+                       default=1.0,
+                       type=float,
+                       help='Coefficient for the termination loss')
+        p.add_argument('--deliberation_cost',
+                       default=0.0,
+                       type=float,
+                       help='Coefficient for the termination loss')
+        p.add_argument(
+            '--exploration_loss',
+            default='entropy',
+            type=str,
+            choices=['entropy', 'symmetric_kl'],
+            help='Usually the exploration loss is based on maximizing the entropy of the probability'
+            ' distribution. Note that mathematically maximizing entropy of the categorical probability '
+            'distribution is exactly the same as minimizing the (regular) KL-divergence between'
+            ' this distribution and a uniform prior. The downside of using the entropy term '
+            '(or regular asymmetric KL-divergence) is the fact that penalty does not increase as '
+            'probabilities of some actions approach zero. I.e. numerically, there is almost '
+            'no difference between an action distribution with a probability epsilon > 0 for '
+            'some action and an action distribution with a probability = zero for this action.'
+            ' For many tasks the first (epsilon) distribution is preferrable because we keep some '
+            '(albeit small) amount of exploration, while the second distribution will never explore '
+            'this action ever again.'
+            'Unlike the entropy term, symmetric KL divergence between the action distribution '
+            'and a uniform prior approaches infinity when entropy of the distribution approaches zero,'
+            ' so it can prevent the pathological situations where the agent stops exploring. '
+            'Empirically, symmetric KL-divergence yielded slightly better results on some problems.',
+        )
 
         # appooc-specific
         p.add_argument(
-            '--num_envs_per_worker', default=2, type=int,
-            help='Number of envs on a single CPU actor, in high-throughput configurations this should be in 10-30 range for Atari/VizDoom'
-                 'Must be even for double-buffered sampling!',
+            '--num_envs_per_worker',
+            default=2,
+            type=int,
+            help=
+            'Number of envs on a single CPU actor, in high-throughput configurations this should be in 10-30 range for Atari/VizDoom'
+            'Must be even for double-buffered sampling!',
         )
         p.add_argument(
-            '--worker_num_splits', default=2, type=int,
-            help='Typically we split a vector of envs into two parts for "double buffered" experience collection'
-                 'Set this to 1 to disable double buffering. Set this to 3 for triple buffering!',
+            '--worker_num_splits',
+            default=2,
+            type=int,
+            help=
+            'Typically we split a vector of envs into two parts for "double buffered" experience collection'
+            'Set this to 1 to disable double buffering. Set this to 3 for triple buffering!',
         )
 
-        p.add_argument('--num_policies', default=1, type=int, help='Number of policies to train jointly')
-        p.add_argument('--policy_workers_per_policy', default=1, type=int, help='Number of policy workers that compute forward pass (per policy)')
+        p.add_argument('--num_policies',
+                       default=1,
+                       type=int,
+                       help='Number of policies to train jointly')
+        p.add_argument('--policy_workers_per_policy',
+                       default=1,
+                       type=int,
+                       help='Number of policy workers that compute forward pass (per policy)')
         p.add_argument(
-            '--max_policy_lag', default=100, type=int,
-            help='Max policy lag in policy versions. Discard all experience that is older than this. This should be increased for configurations with multiple epochs of SGD because naturally'
-                 'policy-lag may exceed this value.',
+            '--max_policy_lag',
+            default=100,
+            type=int,
+            help=
+            'Max policy lag in policy versions. Discard all experience that is older than this. This should be increased for configurations with multiple epochs of SGD because naturally'
+            'policy-lag may exceed this value.',
         )
         p.add_argument(
-            '--min_traj_buffers_per_worker', default=2, type=int,
-            help='How many shared rollout tensors to allocate per actor worker to exchange information between actors and learners'
-                 'Default value of 2 is fine for most workloads, except when differences in 1-step simulation time are extreme, like with some DMLab environments.'
-                 'If you see a lot of warnings about actor workers having to wait for trajectory buffers, try increasing this to 4-6, this should eliminate the problem at a cost of more RAM.',
+            '--min_traj_buffers_per_worker',
+            default=2,
+            type=int,
+            help=
+            'How many shared rollout tensors to allocate per actor worker to exchange information between actors and learners'
+            'Default value of 2 is fine for most workloads, except when differences in 1-step simulation time are extreme, like with some DMLab environments.'
+            'If you see a lot of warnings about actor workers having to wait for trajectory buffers, try increasing this to 4-6, this should eliminate the problem at a cost of more RAM.',
         )
         p.add_argument(
-            '--decorrelate_experience_max_seconds', default=10, type=int,
-            help='Decorrelating experience serves two benefits. First: this is better for learning because samples from workers come from random moments in the episode, becoming more "i.i.d".'
-                 'Second, and more important one: this is good for environments with highly non-uniform one-step times, including long and expensive episode resets. If experience is not decorrelated'
-                 'then training batches will come in bursts e.g. after a bunch of environments finished resets and many iterations on the learner might be required,'
-                 'which will increase the policy-lag of the new experience collected. The performance of the Sample Factory is best when experience is generated as more-or-less'
-                 'uniform stream. Try increasing this to 100-200 seconds to smoothen the experience distribution in time right from the beginning (it will eventually spread out and settle anyway)',
+            '--decorrelate_experience_max_seconds',
+            default=10,
+            type=int,
+            help=
+            'Decorrelating experience serves two benefits. First: this is better for learning because samples from workers come from random moments in the episode, becoming more "i.i.d".'
+            'Second, and more important one: this is good for environments with highly non-uniform one-step times, including long and expensive episode resets. If experience is not decorrelated'
+            'then training batches will come in bursts e.g. after a bunch of environments finished resets and many iterations on the learner might be required,'
+            'which will increase the policy-lag of the new experience collected. The performance of the Sample Factory is best when experience is generated as more-or-less'
+            'uniform stream. Try increasing this to 100-200 seconds to smoothen the experience distribution in time right from the beginning (it will eventually spread out and settle anyway)',
         )
         p.add_argument(
-            '--decorrelate_envs_on_one_worker', default=True, type=str2bool,
-            help='In addition to temporal decorrelation of worker processes, also decorrelate envs within one worker process'
-                 'For environments with a fixed episode length it can prevent the reset from happening in the same rollout for all envs simultaneously, which makes experience collection more uniform.',
+            '--decorrelate_envs_on_one_worker',
+            default=True,
+            type=str2bool,
+            help=
+            'In addition to temporal decorrelation of worker processes, also decorrelate envs within one worker process'
+            'For environments with a fixed episode length it can prevent the reset from happening in the same rollout for all envs simultaneously, which makes experience collection more uniform.',
         )
 
-        p.add_argument('--with_vtrace', default=True, type=str2bool, help='Enables V-trace off-policy correction. If this is True, then GAE is not used')
-        p.add_argument('--vtrace_rho', default=1.0, type=float, help='rho_hat clipping parameter of the V-trace algorithm (importance sampling truncation)')
-        p.add_argument('--vtrace_c', default=1.0, type=float, help='c_hat clipping parameter of the V-trace algorithm. Low values for c_hat can reduce variance of the advantage estimates (similar to GAE lambda < 1)')
+        p.add_argument(
+            '--with_vtrace',
+            default=True,
+            type=str2bool,
+            help='Enables V-trace off-policy correction. If this is True, then GAE is not used')
+        p.add_argument(
+            '--vtrace_rho',
+            default=1.0,
+            type=float,
+            help=
+            'rho_hat clipping parameter of the V-trace algorithm (importance sampling truncation)')
+        p.add_argument(
+            '--vtrace_c',
+            default=1.0,
+            type=float,
+            help=
+            'c_hat clipping parameter of the V-trace algorithm. Low values for c_hat can reduce variance of the advantage estimates (similar to GAE lambda < 1)'
+        )
 
         p.add_argument(
-            '--set_workers_cpu_affinity', default=True, type=str2bool,
-            help='Whether to assign workers to specific CPU cores or not. The logic is beneficial for most workloads because prevents a lot of context switching.'
-                 'However for some environments it can be better to disable it, to allow one worker to use all cores some of the time. This can be the case for some DMLab environments with very expensive episode reset'
-                 'that can use parallel CPU cores for level generation.',
+            '--set_workers_cpu_affinity',
+            default=True,
+            type=str2bool,
+            help=
+            'Whether to assign workers to specific CPU cores or not. The logic is beneficial for most workloads because prevents a lot of context switching.'
+            'However for some environments it can be better to disable it, to allow one worker to use all cores some of the time. This can be the case for some DMLab environments with very expensive episode reset'
+            'that can use parallel CPU cores for level generation.',
         )
         p.add_argument(
-            '--force_envs_single_thread', default=True, type=str2bool,
-            help='Some environments may themselves use parallel libraries such as OpenMP or MKL. Since we parallelize environments on the level of workers, there is no need to keep this parallel semantic.'
-                 'This flag uses threadpoolctl to force libraries such as OpenMP and MKL to use only a single thread within the environment.'
-                 'Default value (True) is recommended unless you are running fewer workers than CPU cores.',
+            '--force_envs_single_thread',
+            default=True,
+            type=str2bool,
+            help=
+            'Some environments may themselves use parallel libraries such as OpenMP or MKL. Since we parallelize environments on the level of workers, there is no need to keep this parallel semantic.'
+            'This flag uses threadpoolctl to force libraries such as OpenMP and MKL to use only a single thread within the environment.'
+            'Default value (True) is recommended unless you are running fewer workers than CPU cores.',
         )
-        p.add_argument('--reset_timeout_seconds', default=120, type=int, help='Fail worker on initialization if not a single environment was reset in this time (worker probably got stuck)')
-
-        p.add_argument('--default_niceness', default=0, type=int, help='Niceness of the highest priority process (the learner). Values below zero require elevated privileges.')
+        p.add_argument(
+            '--reset_timeout_seconds',
+            default=120,
+            type=int,
+            help=
+            'Fail worker on initialization if not a single environment was reset in this time (worker probably got stuck)'
+        )
 
         p.add_argument(
-            '--train_in_background_thread', default=True, type=str2bool,
-            help='Using background thread for training is faster and allows preparing the next batch while training is in progress.'
-                 'Unfortunately debugging can become very tricky in this case. So there is an option to use only a single thread on the learner to simplify the debugging.',
+            '--default_niceness',
+            default=0,
+            type=int,
+            help=
+            'Niceness of the highest priority process (the learner). Values below zero require elevated privileges.'
         )
-        p.add_argument('--learner_main_loop_num_cores', default=1, type=int, help='When batching on the learner is the bottleneck, increasing the number of cores PyTorch uses can improve the performance')
-        p.add_argument('--actor_worker_gpus', default=[], type=int, nargs='*', help='By default, actor workers only use CPUs. Changes this if e.g. you need GPU-based rendering on the actors')
+
+        p.add_argument(
+            '--train_in_background_thread',
+            default=True,
+            type=str2bool,
+            help=
+            'Using background thread for training is faster and allows preparing the next batch while training is in progress.'
+            'Unfortunately debugging can become very tricky in this case. So there is an option to use only a single thread on the learner to simplify the debugging.',
+        )
+        p.add_argument(
+            '--learner_main_loop_num_cores',
+            default=1,
+            type=int,
+            help=
+            'When batching on the learner is the bottleneck, increasing the number of cores PyTorch uses can improve the performance'
+        )
+        p.add_argument(
+            '--actor_worker_gpus',
+            default=[],
+            type=int,
+            nargs='*',
+            help=
+            'By default, actor workers only use CPUs. Changes this if e.g. you need GPU-based rendering on the actors'
+        )
 
         # PBT stuff
-        p.add_argument('--with_pbt', default=False, type=str2bool, help='Enables population-based training basic features')
-        p.add_argument('--pbt_mix_policies_in_one_env', default=True, type=str2bool, help='For multi-agent envs, whether we mix different policies in one env.')
-        p.add_argument('--pbt_period_env_steps', default=int(5e6), type=int, help='Periodically replace the worst policies with the best ones and perturb the hyperparameters')
-        p.add_argument('--pbt_start_mutation', default=int(2e7), type=int, help='Allow initial diversification, start PBT after this many env steps')
-        p.add_argument('--pbt_replace_fraction', default=0.3, type=float, help='A portion of policies performing worst to be replace by better policies (rounded up)')
-        p.add_argument('--pbt_mutation_rate', default=0.15, type=float, help='Probability that a parameter mutates')
-        p.add_argument('--pbt_replace_reward_gap', default=0.1, type=float, help='Relative gap in true reward when replacing weights of the policy with a better performing one')
-        p.add_argument('--pbt_replace_reward_gap_absolute', default=1e-6, type=float, help='Absolute gap in true reward when replacing weights of the policy with a better performing one')
-        p.add_argument('--pbt_optimize_batch_size', default=False, type=str2bool, help='Whether to optimize batch size or not (experimental)')
+        p.add_argument('--with_pbt',
+                       default=False,
+                       type=str2bool,
+                       help='Enables population-based training basic features')
+        p.add_argument('--pbt_mix_policies_in_one_env',
+                       default=True,
+                       type=str2bool,
+                       help='For multi-agent envs, whether we mix different policies in one env.')
         p.add_argument(
-            '--pbt_target_objective', default='true_reward', type=str,
-            help='Policy stat to optimize with PBT. true_reward (default) is equal to raw env reward if not specified, but can also be any other per-policy stat.'
-                 'For DMlab-30 use value "dmlab_target_objective" (which is capped human normalized score)',
+            '--pbt_period_env_steps',
+            default=int(5e6),
+            type=int,
+            help=
+            'Periodically replace the worst policies with the best ones and perturb the hyperparameters'
+        )
+        p.add_argument('--pbt_start_mutation',
+                       default=int(2e7),
+                       type=int,
+                       help='Allow initial diversification, start PBT after this many env steps')
+        p.add_argument(
+            '--pbt_replace_fraction',
+            default=0.3,
+            type=float,
+            help=
+            'A portion of policies performing worst to be replace by better policies (rounded up)')
+        p.add_argument('--pbt_mutation_rate',
+                       default=0.15,
+                       type=float,
+                       help='Probability that a parameter mutates')
+        p.add_argument(
+            '--pbt_replace_reward_gap',
+            default=0.1,
+            type=float,
+            help=
+            'Relative gap in true reward when replacing weights of the policy with a better performing one'
+        )
+        p.add_argument(
+            '--pbt_replace_reward_gap_absolute',
+            default=1e-6,
+            type=float,
+            help=
+            'Absolute gap in true reward when replacing weights of the policy with a better performing one'
+        )
+        p.add_argument('--pbt_optimize_batch_size',
+                       default=False,
+                       type=str2bool,
+                       help='Whether to optimize batch size or not (experimental)')
+        p.add_argument(
+            '--pbt_target_objective',
+            default='true_reward',
+            type=str,
+            help=
+            'Policy stat to optimize with PBT. true_reward (default) is equal to raw env reward if not specified, but can also be any other per-policy stat.'
+            'For DMlab-30 use value "dmlab_target_objective" (which is capped human normalized score)',
         )
 
         # CPC|A options
-        p.add_argument('--use_cpc', default=False, type=str2bool, help='Use CPC|A as an auxiliary loss durning learning')
-        p.add_argument('--cpc_forward_steps', default=8, type=int, help='Number of forward prediction steps for CPC')
-        p.add_argument('--cpc_time_subsample', default=6, type=int, help='Number of timesteps to sample from each batch. This should be less than recurrence to decorrelate experience.')
-        p.add_argument('--cpc_forward_subsample', default=2, type=int, help='Number of forward steps to sample for loss computation. This should be less than cpc_forward_steps to decorrelate gradients.')
+        p.add_argument('--use_cpc',
+                       default=False,
+                       type=str2bool,
+                       help='Use CPC|A as an auxiliary loss durning learning')
+        p.add_argument('--cpc_forward_steps',
+                       default=8,
+                       type=int,
+                       help='Number of forward prediction steps for CPC')
+        p.add_argument(
+            '--cpc_time_subsample',
+            default=6,
+            type=int,
+            help=
+            'Number of timesteps to sample from each batch. This should be less than recurrence to decorrelate experience.'
+        )
+        p.add_argument(
+            '--cpc_forward_subsample',
+            default=2,
+            type=int,
+            help=
+            'Number of forward steps to sample for loss computation. This should be less than cpc_forward_steps to decorrelate gradients.'
+        )
 
         # debugging options
         p.add_argument('--benchmark', default=False, type=str2bool, help='Benchmark mode')
-        p.add_argument('--sampler_only', default=False, type=str2bool, help='Do not send experience to the learner, measuring sampling throughput')
+        p.add_argument('--sampler_only',
+                       default=False,
+                       type=str2bool,
+                       help='Do not send experience to the learner, measuring sampling throughput')
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -254,7 +474,10 @@ class APPOOC(ReinforcementLearningAlgorithm):
         tmp_env.close()
 
         # shared memory allocation
-        self.traj_buffers = SharedBuffers(self.cfg, self.num_agents, self.obs_space, self.action_space)
+        self.traj_buffers = SharedBuffers(self.cfg,
+                                          self.num_agents,
+                                          self.obs_space,
+                                          self.action_space)
 
         self.actor_workers = None
 
@@ -328,9 +551,16 @@ class APPOOC(ReinforcementLearningAlgorithm):
         learner_queues = {p: w.task_queue for p, w in self.learner_workers.items()}
 
         return ActorWorker(
-            self.cfg, self.obs_space, self.action_space, self.num_agents, idx, self.traj_buffers,
-            task_queue=actor_queue, policy_queues=self.policy_queues,
-            report_queue=self.report_queue, learner_queues=learner_queues,
+            self.cfg,
+            self.obs_space,
+            self.action_space,
+            self.num_agents,
+            idx,
+            self.traj_buffers,
+            task_queue=actor_queue,
+            policy_queues=self.policy_queues,
+            report_queue=self.report_queue,
+            learner_queues=learner_queues,
         )
 
     # noinspection PyProtectedMember
@@ -374,7 +604,9 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
                     log.debug(
                         'Progress for %d workers: %d/%d envs initialized...',
-                        len(indices), sum(envs_initialized), total_num_envs,
+                        len(indices),
+                        sum(envs_initialized),
+                        total_num_envs,
                     )
                 elif 'finished_reset' in report:
                     workers_finished.add(report['finished_reset'])
@@ -393,7 +625,9 @@ class APPOOC(ReinforcementLearningAlgorithm):
                 if timeout or failed_worker == worker_idx or not w.process.is_alive():
                     envs_initialized[worker_idx] = 0
 
-                    log.error('Worker %d is stuck or failed (%.3f). Reset!', w.worker_idx, time_passed)
+                    log.error('Worker %d is stuck or failed (%.3f). Reset!',
+                              w.worker_idx,
+                              time_passed)
                     log.debug('Status: %r', w.process.is_alive())
                     stuck_worker = w
                     stuck_worker.process.kill()
@@ -424,14 +658,23 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
         log.info('Initializing learners...')
         policy_locks = [multiprocessing.Lock() for _ in range(self.cfg.num_policies)]
-        resume_experience_collection_cv = [multiprocessing.Condition() for _ in range(self.cfg.num_policies)]
+        resume_experience_collection_cv = [
+            multiprocessing.Condition() for _ in range(self.cfg.num_policies)
+        ]
 
         learner_idx = 0
         for policy_id in range(self.cfg.num_policies):
             learner_worker = LearnerWorker(
-                learner_idx, policy_id, self.cfg, self.obs_space, self.action_space,
-                self.report_queue, policy_worker_queues[policy_id], self.traj_buffers,
-                policy_locks[policy_id], resume_experience_collection_cv[policy_id],
+                learner_idx,
+                policy_id,
+                self.cfg,
+                self.obs_space,
+                self.action_space,
+                self.report_queue,
+                policy_worker_queues[policy_id],
+                self.traj_buffers,
+                policy_locks[policy_id],
+                resume_experience_collection_cv[policy_id],
             )
             learner_worker.start_process()
             learner_worker.init()
@@ -448,9 +691,18 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
             for i in range(self.cfg.policy_workers_per_policy):
                 policy_worker = PolicyWorker(
-                    i, policy_id, self.cfg, self.obs_space, self.action_space, self.traj_buffers,
-                    policy_queue, actor_queues, self.report_queue, policy_worker_queues[policy_id][i],
-                    policy_locks[policy_id], resume_experience_collection_cv[policy_id],
+                    i,
+                    policy_id,
+                    self.cfg,
+                    self.obs_space,
+                    self.action_space,
+                    self.traj_buffers,
+                    policy_queue,
+                    actor_queues,
+                    self.report_queue,
+                    policy_worker_queues[policy_id][i],
+                    policy_locks[policy_id],
+                    resume_experience_collection_cv[policy_id],
                 )
                 self.policy_workers[policy_id].append(policy_worker)
                 policy_worker.start_process()
@@ -478,7 +730,9 @@ class APPOOC(ReinforcementLearningAlgorithm):
         """Wait until policy workers are fully initialized."""
         for policy_id, workers in self.policy_workers.items():
             for w in workers:
-                log.debug('Waiting for policy worker %d-%d to finish initialization...', policy_id, w.worker_idx)
+                log.debug('Waiting for policy worker %d-%d to finish initialization...',
+                          policy_id,
+                          w.worker_idx)
                 w.init()
                 log.debug('Policy worker %d-%d initialized!', policy_id, w.worker_idx)
 
@@ -502,7 +756,9 @@ class APPOOC(ReinforcementLearningAlgorithm):
                 s = report['episodic']
                 for _, key, value in iterate_recursively(s):
                     if key not in self.policy_avg_stats:
-                        self.policy_avg_stats[key] = [deque(maxlen=self.cfg.stats_avg) for _ in range(self.cfg.num_policies)]
+                        self.policy_avg_stats[key] = [
+                            deque(maxlen=self.cfg.stats_avg) for _ in range(self.cfg.num_policies)
+                        ]
 
                     self.policy_avg_stats[key][policy_id].append(value)
 
@@ -548,7 +804,8 @@ class APPOOC(ReinforcementLearningAlgorithm):
             self.throughput_stats[policy_id].append((now, self.samples_collected[policy_id]))
             if len(self.throughput_stats[policy_id]) > 1:
                 past_moment, past_samples = self.throughput_stats[policy_id][0]
-                sample_throughput[policy_id] = (self.samples_collected[policy_id] - past_samples) / (now - past_moment)
+                sample_throughput[policy_id] = (self.samples_collected[policy_id] -
+                                                past_samples) / (now - past_moment)
             else:
                 sample_throughput[policy_id] = math.nan
 
@@ -575,7 +832,11 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
         log.debug(
             'Fps is %s. Total num frames: %d. Throughput: %s. Samples: %d. Policy #0 lag: (%s)',
-            fps_str, total_env_steps, samples_per_policy, sum(self.samples_collected), policy_lag_str,
+            fps_str,
+            total_env_steps,
+            samples_per_policy,
+            sum(self.samples_collected),
+            policy_lag_str,
         )
 
         if 'reward' in self.policy_avg_stats:
@@ -599,19 +860,27 @@ class APPOOC(ReinforcementLearningAlgorithm):
         for policy_id, env_steps in self.env_steps.items():
             if policy_id == default_policy:
                 self.writers[policy_id].add_scalar('0_aux/_fps', fps, env_steps)
-                self.writers[policy_id].add_scalar('0_aux/master_process_memory_mb', float(memory_mb), env_steps)
+                self.writers[policy_id].add_scalar('0_aux/master_process_memory_mb',
+                                                   float(memory_mb),
+                                                   env_steps)
                 for key, value in self.avg_stats.items():
-                    if len(value) >= value.maxlen or (len(value) > 10 and self.total_train_seconds > 300):
-                        self.writers[policy_id].add_scalar(f'stats/{key}', np.mean(value), env_steps)
+                    if len(value) >= value.maxlen or (len(value) > 10 and
+                                                      self.total_train_seconds > 300):
+                        self.writers[policy_id].add_scalar(f'stats/{key}',
+                                                           np.mean(value),
+                                                           env_steps)
 
                 for key, value in self.stats.items():
                     self.writers[policy_id].add_scalar(f'stats/{key}', value, env_steps)
 
             if not math.isnan(sample_throughput[policy_id]):
-                self.writers[policy_id].add_scalar('0_aux/_sample_throughput', sample_throughput[policy_id], env_steps)
+                self.writers[policy_id].add_scalar('0_aux/_sample_throughput',
+                                                   sample_throughput[policy_id],
+                                                   env_steps)
 
             for key, stat in self.policy_avg_stats.items():
-                if len(stat[policy_id]) >= stat[policy_id].maxlen or (len(stat[policy_id]) > 10 and self.total_train_seconds > 300):
+                if len(stat[policy_id]) >= stat[policy_id].maxlen or (
+                        len(stat[policy_id]) > 10 and self.total_train_seconds > 300):
                     stat_value = np.mean(stat[policy_id])
                     writer = self.writers[policy_id]
 
@@ -633,10 +902,15 @@ class APPOOC(ReinforcementLearningAlgorithm):
                         writer.add_scalar(max_tag, float(max(stat[policy_id])), env_steps)
 
             for extra_summaries_func in EXTRA_PER_POLICY_SUMMARIES:
-                extra_summaries_func(policy_id, self.policy_avg_stats, env_steps, self.writers[policy_id], self.cfg)
+                extra_summaries_func(policy_id,
+                                     self.policy_avg_stats,
+                                     env_steps,
+                                     self.writers[policy_id],
+                                     self.cfg)
 
     def _should_end_training(self):
-        end = len(self.env_steps) > 0 and all(s > self.cfg.train_for_env_steps for s in self.env_steps.values())
+        end = len(self.env_steps) > 0 and all(
+            s > self.cfg.train_for_env_steps for s in self.env_steps.values())
         end |= self.total_train_seconds > self.cfg.train_for_seconds
 
         if self.cfg.benchmark:

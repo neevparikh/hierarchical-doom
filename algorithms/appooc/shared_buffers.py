@@ -97,7 +97,8 @@ class SharedBuffers:
 
         # this is for performance optimization
         # indexing in numpy arrays is faster than in PyTorch tensors
-        self.tensors_individual_transitions = self.tensor_dict_to_numpy(len(self.tensor_dimensions()))
+        self.tensors_individual_transitions = self.tensor_dict_to_numpy(
+            len(self.tensor_dimensions()))
         self.tensor_trajectories = self.tensor_dict_to_numpy(len(self.tensor_dimensions()) - 1)
 
         # create a shared tensor to indicate when the learner is done with the trajectory buffer and
@@ -145,7 +146,9 @@ class SharedBuffers:
         # we could have just copied the tensors on the learner to avoid this complicated logic, but it's better for
         # performance to keep data in shared buffers until they're needed
         samples_per_iteration = self.cfg.num_batches_per_iteration * self.cfg.batch_size * self.cfg.num_policies
-        num_traj_buffers = samples_per_iteration / (self.cfg.num_workers * self.cfg.num_envs_per_worker * self.num_agents * self.cfg.rollout)
+        num_traj_buffers = samples_per_iteration / (self.cfg.num_workers *
+                                                    self.cfg.num_envs_per_worker * self.num_agents *
+                                                    self.cfg.rollout)
 
         # make sure we definitely have enough buffers to actually never wait
         # usually it'll be just two buffers and we swap back and forth

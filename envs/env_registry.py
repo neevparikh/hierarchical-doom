@@ -4,7 +4,11 @@ ENV_REGISTRY = None
 
 
 class EnvRegistryEntry:
-    def __init__(self, env_name_prefix, make_env_func, add_extra_params_func=None, override_default_params_func=None):
+    def __init__(self,
+                 env_name_prefix,
+                 make_env_func,
+                 add_extra_params_func=None,
+                 override_default_params_func=None):
         self.env_name_prefix = env_name_prefix
         self.make_env_func = make_env_func
         self.add_extra_params_func = add_extra_params_func
@@ -16,7 +20,11 @@ class EnvRegistry:
         self.registry = dict()
 
     def register_env(
-            self, env_name_prefix, make_env_func, add_extra_params_func=None, override_default_params_func=None,
+        self,
+        env_name_prefix,
+        make_env_func,
+        add_extra_params_func=None,
+        override_default_params_func=None,
     ):
         """
         A standard thing to do in RL frameworks is to just rely on unique environment names registered in Gym.
@@ -53,7 +61,10 @@ class EnvRegistry:
 
         assert callable(make_env_func), 'make_env_func should be callable'
 
-        entry = EnvRegistryEntry(env_name_prefix, make_env_func, add_extra_params_func, override_default_params_func)
+        entry = EnvRegistryEntry(env_name_prefix,
+                                 make_env_func,
+                                 add_extra_params_func,
+                                 override_default_params_func)
         self.registry[env_name_prefix] = entry
 
         log.debug('Env registry entry created: %s', env_name_prefix)
@@ -63,7 +74,7 @@ class EnvRegistry:
         assert callable(register_env_family_func)
 
         self.registry[env_name_prefix] = register_env_family_func
-        
+
     def resolve_env_name(self, full_env_name):
         """
         :param full_env_name: complete name of the environment, to be passed to the make_env_func, e.g. atari_breakout
@@ -78,7 +89,10 @@ class EnvRegistry:
             # We found a match. If it's a callable, we should first handle a deferred registry entry
             if callable(registry_entry):
                 make_env_func, add_extra_params_func, override_default_params_func = registry_entry()
-                self.register_env(env_prefix, make_env_func, add_extra_params_func, override_default_params_func)
+                self.register_env(env_prefix,
+                                  make_env_func,
+                                  add_extra_params_func,
+                                  override_default_params_func)
 
             return self.registry[env_prefix]
 

@@ -1,7 +1,9 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
 _params = ParamGrid([
-    ('env', ['voxel_env_rearrange', 'voxel_env_collect', 'voxel_env_obstaclesEasy', 'voxel_env_hexMemory']),
+    ('env',
+     ['voxel_env_rearrange', 'voxel_env_collect', 'voxel_env_obstaclesEasy',
+      'voxel_env_hexMemory']),
     ('voxel_num_simulation_threads', [1]),
     ('rnn_num_layers', [2]),
 ])

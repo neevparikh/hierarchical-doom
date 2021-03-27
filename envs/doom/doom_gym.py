@@ -78,7 +78,6 @@ def key_to_action_default(key):
 
 
 class VizdoomEnv(gym.Env):
-
     def __init__(self,
                  action_space,
                  config_file,
@@ -164,14 +163,18 @@ class VizdoomEnv(gym.Env):
         return [self.curr_seed, self.rng]
 
     def calc_observation_space(self):
-        self.observation_space = gym.spaces.Box(0, 255, (self.screen_h, self.screen_w, self.channels), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(0,
+                                                255, (self.screen_h, self.screen_w, self.channels),
+                                                dtype=np.uint8)
 
     def _set_game_mode(self, mode):
         if mode == 'replay':
             self.game.set_mode(Mode.PLAYER)
         else:
             if self.async_mode:
-                log.info('Starting in async mode! Use this only for testing, otherwise PLAYER mode is much faster')
+                log.info(
+                    'Starting in async mode! Use this only for testing, otherwise PLAYER mode is much faster'
+                )
                 self.game.set_mode(Mode.ASYNC_PLAYER)
             else:
                 self.game.set_mode(Mode.PLAYER)
@@ -213,7 +216,9 @@ class VizdoomEnv(gym.Env):
             except Timeout:
                 if with_locking:
                     log.debug(
-                        'Another process currently holds the lock %s, attempt: %d', lock_file, init_attempt,
+                        'Another process currently holds the lock %s, attempt: %d',
+                        lock_file,
+                        init_attempt,
                     )
             except Exception as exc:
                 log.warning('VizDoom game.init() threw an exception %r. Terminate process...', exc)
@@ -343,8 +348,8 @@ class VizdoomEnv(gym.Env):
             spaces = self.action_space.spaces
         else:
             # simple action space, e.g. Discrete. We still treat it like composite of length 1
-            spaces = (self.action_space, )
-            actions = (actions, )
+            spaces = (self.action_space,)
+            actions = (actions,)
 
         actions_flattened = []
         for i, action in enumerate(actions):
@@ -367,7 +372,8 @@ class VizdoomEnv(gym.Env):
                 # continuous action
                 actions_flattened.extend(list(action * self.delta_actions_scaling_factor))
             else:
-                raise NotImplementedError(f'Action subspace type {type(spaces[i])} is not supported!')
+                raise NotImplementedError(
+                    f'Action subspace type {type(spaces[i])} is not supported!')
 
         return actions_flattened
 
@@ -545,7 +551,8 @@ class VizdoomEnv(gym.Env):
 
         # noinspection PyProtectedMember
         def start_listener():
-            with Listener(on_press=doom._keyboard_on_press, on_release=doom._keyboard_on_release) as listener:
+            with Listener(on_press=doom._keyboard_on_press,
+                          on_release=doom._keyboard_on_release) as listener:
                 listener.join()
 
         listener_thread = Thread(target=start_listener)
@@ -587,7 +594,8 @@ class VizdoomEnv(gym.Env):
                     if state is not None and verbose:
                         info = doom.get_info()
                         print(
-                            'Health:', info['HEALTH'],
+                            'Health:',
+                            info['HEALTH'],
                             # 'Weapon:', info['SELECTED_WEAPON'],
                             # 'ready:', info['ATTACK_READY'],
                             # 'ammo:', info['SELECTED_WEAPON_AMMO'],
@@ -632,7 +640,9 @@ class VizdoomEnv(gym.Env):
             doom.game.advance_action()
             r = doom.game.get_last_reward()
             episode_reward += r
-            log.info('Episode reward: %.3f, time so far: %.1f s', episode_reward, time.time() - start)
+            log.info('Episode reward: %.3f, time so far: %.1f s',
+                     episode_reward,
+                     time.time() - start)
 
         log.info('Finishing replay')
         doom.close()

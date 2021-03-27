@@ -4,7 +4,6 @@ import numpy as np
 
 class MultiplayerStatsWrapper(gym.Wrapper):
     """Add to info things like place in the match, gap to leader, kill-death ratio etc."""
-
     def __init__(self, env):
         super().__init__(env)
         self.timestep = 0
@@ -18,7 +17,10 @@ class MultiplayerStatsWrapper(gym.Wrapper):
 
             player_count = int(info.get('PLAYER_COUNT', 1))
             player_num = int(info.get('PLAYER_NUMBER', 0))
-            fragcounts = [int(info.get(f'PLAYER{pi}_FRAGCOUNT', -100000)) for pi in range(1, player_count + 1)]
+            fragcounts = [
+                int(info.get(f'PLAYER{pi}_FRAGCOUNT', -100000))
+                for pi in range(1, player_count + 1)
+            ]
             places = list(np.argsort(fragcounts))
 
             final_place = places.index(player_num)

@@ -6,7 +6,6 @@ import gym
 # noinspection PyProtectedMember
 class StepHumanInput(gym.Wrapper):
     """Doom wrapper that allows to play with human input."""
-
     def __init__(self, env):
         super(StepHumanInput, self).__init__(env)
 

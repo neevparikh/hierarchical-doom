@@ -12,7 +12,6 @@ from utils.utils import log
 
 
 class TestModel(TestCase):
-
     @staticmethod
     def forward_pass(device_type):
         env_name = 'atari_breakout'

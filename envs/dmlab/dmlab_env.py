@@ -33,14 +33,16 @@ DMLAB_ENVS = [
 
     # train a single agent for all 30 DMLab tasks
     DmLabSpec('dmlab_30', [dmlab30_level_name_to_level(l) for l in DMLAB30_LEVELS]),
-    DmLabSpec('dmlab_level_cache', [dmlab30_level_name_to_level(l) for l in DMLAB30_LEVELS_THAT_USE_LEVEL_CACHE]),
+    DmLabSpec('dmlab_level_cache',
+              [dmlab30_level_name_to_level(l) for l in DMLAB30_LEVELS_THAT_USE_LEVEL_CACHE]),
 
     # this is very hard to work with as a benchmark, because FPS fluctuates a lot due to slow resets.
     # also depends a lot on whether levels are in level cache or not
     DmLabSpec('dmlab_benchmark_slow_reset', 'contributed/dmlab30/rooms_keys_doors_puzzle'),
-
     DmLabSpec('dmlab_sparse', 'contributed/dmlab30/explore_goal_locations_large'),
-    DmLabSpec('dmlab_very_sparse', 'contributed/dmlab30/explore_goal_locations_large', extra_cfg={'minGoalDistance': '10'}),
+    DmLabSpec('dmlab_very_sparse',
+              'contributed/dmlab30/explore_goal_locations_large',
+              extra_cfg={'minGoalDistance': '10'}),
     DmLabSpec('dmlab_sparse_doors', 'contributed/dmlab30/explore_obstructed_goals_large'),
     DmLabSpec('dmlab_nonmatch', 'contributed/dmlab30/rooms_select_nonmatching_object'),
     DmLabSpec('dmlab_watermaze', 'contributed/dmlab30/rooms_watermaze'),
@@ -53,7 +55,8 @@ def dmlab_env_by_name(name):
             return spec
 
     # not a known "named" environment with a predefined spec
-    log.warning('Level %s not found. Interpreting the level name as an unmodified DMLab-30 env name!', name)
+    log.warning(
+        'Level %s not found. Interpreting the level name as an unmodified DMLab-30 env name!', name)
     level = name.split('dmlab_')[1]
     spec = DmLabSpec(name, level)
     return spec
@@ -113,10 +116,20 @@ def make_dmlab_env_impl(spec, cfg, env_config, **kwargs):
     log.debug('%r level %s task id %d', env_config, level, task_id)
 
     env = DmlabGymEnv(
-        task_id, level, skip_frames, cfg.res_w, cfg.res_h, cfg.dmlab_throughput_benchmark, cfg.dmlab_renderer,
-        get_dataset_path(cfg), cfg.dmlab_with_instructions, cfg.dmlab_extended_action_set,
-        cfg.dmlab_use_level_cache, cfg.dmlab_level_cache_path,
-        gpu_idx, spec.extra_cfg,
+        task_id,
+        level,
+        skip_frames,
+        cfg.res_w,
+        cfg.res_h,
+        cfg.dmlab_throughput_benchmark,
+        cfg.dmlab_renderer,
+        get_dataset_path(cfg),
+        cfg.dmlab_with_instructions,
+        cfg.dmlab_extended_action_set,
+        cfg.dmlab_use_level_cache,
+        cfg.dmlab_level_cache_path,
+        gpu_idx,
+        spec.extra_cfg,
     )
 
     if env_config and 'env_id' in env_config:
@@ -212,17 +225,24 @@ def dmlab_extra_summaries(policy_id, policy_avg_stats, env_steps, summary_writer
         level_mean_scores_normalized_capped.append(capped_human_normalized_score)
 
         level_key = f'{level_idx:02d}_{level}'
-        summary_writer.add_scalar(f'_dmlab/{level_key}_human_norm_score', human_normalized_score, env_steps)
-        summary_writer.add_scalar(f'_dmlab/capped_{level_key}_human_norm_score', capped_human_normalized_score, env_steps)
+        summary_writer.add_scalar(f'_dmlab/{level_key}_human_norm_score',
+                                  human_normalized_score,
+                                  env_steps)
+        summary_writer.add_scalar(f'_dmlab/capped_{level_key}_human_norm_score',
+                                  capped_human_normalized_score,
+                                  env_steps)
 
-    assert len(level_mean_scores_normalized) == len(level_mean_scores_normalized_capped) == len(all_levels)
+    assert len(level_mean_scores_normalized) == len(level_mean_scores_normalized_capped) == len(
+        all_levels)
 
     mean_normalized_score = np.mean(level_mean_scores_normalized)
     capped_mean_normalized_score = np.mean(level_mean_scores_normalized_capped)
 
     # use 000 here to put these summaries on top in tensorboard (it sorts by ASCII)
     summary_writer.add_scalar(f'_dmlab/000_mean_human_norm_score', mean_normalized_score, env_steps)
-    summary_writer.add_scalar(f'_dmlab/000_capped_mean_human_norm_score', capped_mean_normalized_score, env_steps)
+    summary_writer.add_scalar(f'_dmlab/000_capped_mean_human_norm_score',
+                              capped_mean_normalized_score,
+                              env_steps)
 
     # clear the scores and start anew (this is exactly what IMPALA does)
     dmlab_extra_episodic_stats_processing.new_level_returns[policy_id] = dict()
@@ -250,6 +270,9 @@ def ensure_initialized(cfg, env_name):
     num_policies = cfg.num_policies if hasattr(cfg, 'num_policies') else 1
     all_levels = list_all_levels_for_experiment(env_name)
     level_cache_dir = cfg.dmlab_level_cache_path
-    dmlab_ensure_global_cache_initialized(experiment_dir(cfg=cfg), all_levels, num_policies, level_cache_dir)
+    dmlab_ensure_global_cache_initialized(experiment_dir(cfg=cfg),
+                                          all_levels,
+                                          num_policies,
+                                          level_cache_dir)
 
     DMLAB_INITIALIZED = True

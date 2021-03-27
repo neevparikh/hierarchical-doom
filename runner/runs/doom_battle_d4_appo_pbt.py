@@ -12,5 +12,8 @@ _experiments = [
     ),
 ]
 
-
-RUN_DESCRIPTION = RunDescription('doom_battle_d4_appo_v64_fs4_pbt', experiments=_experiments, use_gpus=2, experiments_per_gpu=-1, max_parallel=1)
+RUN_DESCRIPTION = RunDescription('doom_battle_d4_appo_v64_fs4_pbt',
+                                 experiments=_experiments,
+                                 use_gpus=2,
+                                 experiments_per_gpu=-1,
+                                 max_parallel=1)

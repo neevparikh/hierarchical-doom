@@ -12,7 +12,6 @@ from envs.dmlab.dmlab30 import DMLAB30_APPROX_NUM_EPISODES_PER_BILLION_FRAMES, D
 from utils.timing import Timing
 from utils.utils import log, AttrDict, get_free_disk_space_mb
 
-
 DESIRED_TRAINING_LENGTH = int(15e9)
 
 
@@ -46,14 +45,21 @@ class DmlabLevelGenerator(DummySampler):
                 env_key = env.unwrapped.level_name
                 env_level = env.unwrapped.level
 
-                approx_num_episodes_per_1b_frames = DMLAB30_APPROX_NUM_EPISODES_PER_BILLION_FRAMES[env_key]
+                approx_num_episodes_per_1b_frames = DMLAB30_APPROX_NUM_EPISODES_PER_BILLION_FRAMES[
+                    env_key]
                 num_billions = DESIRED_TRAINING_LENGTH / int(1e9)
                 num_workers_for_env = self.cfg.num_workers // num_envs
-                env_desired_num_levels = int((approx_num_episodes_per_1b_frames * num_billions) / num_workers_for_env)
+                env_desired_num_levels = int(
+                    (approx_num_episodes_per_1b_frames * num_billions) / num_workers_for_env)
 
-                env_num_levels_generated = len(dmlab_level_cache.DMLAB_GLOBAL_LEVEL_CACHE[0].all_seeds[env_level]) // num_workers_for_env
+                env_num_levels_generated = len(dmlab_level_cache.DMLAB_GLOBAL_LEVEL_CACHE[0].
+                                               all_seeds[env_level]) // num_workers_for_env
 
-                log.warning('Worker %d (env %s) generated %d/%d levels!', proc_idx, env_key, env_num_levels_generated, env_desired_num_levels)
+                log.warning('Worker %d (env %s) generated %d/%d levels!',
+                            proc_idx,
+                            env_key,
+                            env_num_levels_generated,
+                            env_desired_num_levels)
                 time.sleep(4)
 
             env.reset()
@@ -76,10 +82,16 @@ class DmlabLevelGenerator(DummySampler):
                     with timing.add_time(f'{env_key}.reset'):
                         env.reset()
                         env_num_levels_generated += 1
-                        log.debug('Env %s done %d/%d resets', env_key, env_num_levels_generated, env_desired_num_levels)
+                        log.debug('Env %s done %d/%d resets',
+                                  env_key,
+                                  env_num_levels_generated,
+                                  env_desired_num_levels)
 
                     if env_num_levels_generated >= env_desired_num_levels:
-                        log.debug('%s finished %d/%d resets, sleeping...', env_key, env_num_levels_generated, env_desired_num_levels)
+                        log.debug('%s finished %d/%d resets, sleeping...',
+                                  env_key,
+                                  env_num_levels_generated,
+                                  env_desired_num_levels)
                         time.sleep(30)  # free up CPU time for other envs
 
                     # if env does not use level cache, there is no need to run it
@@ -94,10 +106,12 @@ class DmlabLevelGenerator(DummySampler):
                             last_report = now
                             frames_since_last_report = total_env_frames - last_report_frames
                             last_report_frames = total_env_frames
-                            self.report_queue.put(dict(proc_idx=proc_idx, env_frames=frames_since_last_report))
+                            self.report_queue.put(
+                                dict(proc_idx=proc_idx, env_frames=frames_since_last_report))
 
                             if get_free_disk_space_mb(self.cfg) < 3 * 1024:
-                                log.error('Not enough disk space! %d', get_free_disk_space_mb(self.cfg))
+                                log.error('Not enough disk space! %d',
+                                          get_free_disk_space_mb(self.cfg))
                                 time.sleep(200)
         except:
             log.exception('Unknown exception')
@@ -130,6 +144,5 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-
 
 # --algo=DUMMY_SAMPLER --env=dmlab_level_cache --env_frameskip=4 --num_workers=30 --num_envs_per_worker=1 --sample_env_frames=40000000000 --sample_env_frames_per_worker=40000000000 --set_workers_cpu_affinity=False --dmlab_use_level_cache=True --dmlab_renderer=software --experiment=dmlab_populate_cache

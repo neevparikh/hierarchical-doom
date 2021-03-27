@@ -20,11 +20,9 @@ class DmlabEncoder(EncoderBase):
         self.instructions_lstm_layers = 1
 
         padding_idx = 0
-        self.word_embedding = nn.Embedding(
-            num_embeddings=DMLAB_VOCABULARY_SIZE,
-            embedding_dim=self.embedding_size,
-            padding_idx=padding_idx
-        )
+        self.word_embedding = nn.Embedding(num_embeddings=DMLAB_VOCABULARY_SIZE,
+                                           embedding_dim=self.embedding_size,
+                                           padding_idx=padding_idx)
 
         self.instructions_lstm = nn.LSTM(
             input_size=self.embedding_size,
@@ -69,7 +67,10 @@ class DmlabEncoder(EncoderBase):
         with self.timing.add_time('dmlab_encode_instr'):
             instr_embed = self.word_embedding(instr)
             instr_packed = torch.nn.utils.rnn.pack_padded_sequence(
-                instr_embed, instr_lengths, batch_first=True, enforce_sorted=False,
+                instr_embed,
+                instr_lengths,
+                batch_first=True,
+                enforce_sorted=False,
             )
             rnn_output, _ = self.instructions_lstm(instr_packed)
             rnn_outputs, sequence_lengths = torch.nn.utils.rnn.pad_packed_sequence(rnn_output, batch_first=True)
