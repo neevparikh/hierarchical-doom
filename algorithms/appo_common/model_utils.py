@@ -411,20 +411,22 @@ class ActionsParameterizationBase(nn.Module):
         self.cfg = cfg
         self.action_space = action_space
 
+
 class ActionParameterizationOption(ActionsParameterizationBase):
     """
-    TODO
+    Parameterized based on options
     """
 
     def __init__(self, cfg, core_out_size, action_space):
         super().__init__(cfg, action_space)
         
-        num_action_outputs = calc_num_logits(action_space)
-        self.distribution_linear = nn.Linear(core_out_size, num_action_outputs * cfg.num_options)
+        self.num_action_outputs = calc_num_logits(action_space)
+        self.num_options = num_options
+        self.distribution_linear = nn.Linear(core_out_size, self.num_action_outputs * cfg.num_options)
 
     def forward(self, actor_core_output, option_idx):
         """Just forward the FC layer and generate the distribution object."""
-        action_distribution_params = self.distribution_linear(actor_core_output)[option_idx]
+        action_distribution_params = self.distribution_linear(actor_core_output)[option_idx].view(self.num_action_outputs, num_options)[option_idx]
         action_distribution = get_action_distribution(self.action_space, raw_logits=action_distribution_params)
         return action_distribution_params, action_distribution
 

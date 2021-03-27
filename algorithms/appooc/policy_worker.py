@@ -106,7 +106,7 @@ class PolicyWorker:
                 rnn_states = rnn_states.to(self.device).float()
 
             with timing.add_time('forward'):
-                policy_outputs = self.actor_critic(observations, rnn_states)
+                policy_outputs = self.actor_critic(observations, rnn_states, acting=True)
 
             with timing.add_time('to_cpu'):
                 for key, output_value in policy_outputs.items():

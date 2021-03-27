@@ -79,9 +79,12 @@ class SharedBuffers:
             ('actions', num_actions),
             ('action_logits', num_action_logits),
             ('log_prob_actions', 1),
-            ('values', 1),
             ('policy_version', 1),
-            ('rnn_states', hidden_size)
+            ('rnn_states', hidden_size),
+            ('values', cfg.num_options),
+            ('option_idx', 1),
+            ('termination_prob', cfg.num_options),
+            ('termination_mask', cfg.num_options),
         ]
 
         policy_outputs = [PolicyOutput(*po) for po in policy_outputs]

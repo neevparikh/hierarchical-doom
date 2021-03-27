@@ -87,7 +87,7 @@ class APPOOC(ReinforcementLearningAlgorithm):
         )
 
         p.add_argument('--num_options', default=8, type=int, help='Number of options to use for Option Critic')
-        p.add_argument('--options_epsilon', type=float, help='Option epsilon value for Option Critic')
+        p.add_argument('--option_epsilon', default=0.1, type=float, help='Option epsilon value for Option Critic')
         p.add_argument('--use_rnn', default=True, type=str2bool, help='Whether to use RNN core in a policy or not')
         p.add_argument('--rnn_type', default='gru', choices=['gru', 'lstm'], type=str, help='Type of RNN cell to use if use_rnn is True')
         p.add_argument('--rnn_num_layers', default=1, type=int, help='Number of RNN layers to use if use_rnn is True')
@@ -123,6 +123,8 @@ class APPOOC(ReinforcementLearningAlgorithm):
         p.add_argument('--exploration_loss_coeff', default=0.003, type=float,
                        help='Coefficient for the exploration component of the loss function.')
         p.add_argument('--value_loss_coeff', default=0.5, type=float, help='Coefficient for the critic loss')
+        p.add_argument('--termination_loss_coeff', default=1.0, type=float, help='Coefficient for the termination loss')
+        p.add_argument('--deliberation_cost', default=0.0, type=float, help='Coefficient for the termination loss')
         p.add_argument('--exploration_loss', default='entropy', type=str, choices=['entropy', 'symmetric_kl'],
                        help='Usually the exploration loss is based on maximizing the entropy of the probability'
                             ' distribution. Note that mathematically maximizing entropy of the categorical probability '
