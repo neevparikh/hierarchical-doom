@@ -354,6 +354,7 @@ class LearnerWorker:
 
         if not self.cfg.with_vtrace:
             with timing.add_time('calc_gae'):
+                buffer.values = buffer.values[:, buffer.option_idx].squeeze() # TODO: Check the indexing
                 buffer = self._calculate_gae(buffer)
 
         with timing.add_time('batching'):
@@ -373,7 +374,7 @@ class LearnerWorker:
         with timing.add_time('squeeze'):
             # will squeeze actions only in simple categorical case
             tensors_to_squeeze = [
-                'actions', 'log_prob_actions', 'policy_version', 'values',
+                'actions', 'log_prob_actions', 'policy_version',
                 'rewards', 'dones', 'rewards_cpu', 'dones_cpu',
             ]
             for tensor_name in tensors_to_squeeze:
@@ -577,6 +578,14 @@ class LearnerWorker:
 
         return value_loss
 
+    def _termination_loss_func(self, values, terminations):
+        eps = self.cfg.options_epsilon
+        option_value = eps * values.mean(dim=1) + (1 - eps) * values.max(dim=1)
+        grad = values - option_value + self.cfg.deliberation_cost
+        term_loss = grad * terminations * self.cfg.termination_loss_coeff
+
+        return term_loss
+
     def entropy_exploration_loss(self, action_distribution):
         entropy = action_distribution.entropy()
         entropy_loss = -self.cfg.exploration_loss_coeff * entropy.mean()
@@ -703,7 +712,7 @@ class LearnerWorker:
                     # super large/small values can cause numerical problems and are probably noise anyway
                     ratio = torch.clamp(ratio, 0.05, 20.0)
 
-                    values = result.values.squeeze()
+                    values = result.values[:, mb.option_idx].squeeze() # TODO: Check the indexing
 
                 with torch.no_grad():  # these computations are not the part of the computation graph
                     if self.cfg.with_vtrace:
@@ -752,9 +761,9 @@ class LearnerWorker:
 
                 with timing.add_time('losses'):
                     policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high)
-
                     exploration_loss = self.exploration_loss_func(action_distribution)
-                    actor_loss = policy_loss + exploration_loss
+                    termination_loss = self._termination_loss_func(values, result.values, result.termination_mask[:, mb.option_idx])
+                    actor_loss = policy_loss + exploration_loss + termination_loss
                     epoch_actor_losses.append(actor_loss.item())
 
                     targets = targets.to(self.device)
