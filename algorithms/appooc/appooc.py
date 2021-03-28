@@ -110,7 +110,7 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
         p.add_argument(
             '--recurrence',
-            default=32,
+            default=1,
             type=int,
             help=
             'Trajectory length for backpropagation through time. If recurrence=1 there is no backpropagation through time, and experience is shuffled completely randomly'
@@ -293,7 +293,7 @@ class APPOOC(ReinforcementLearningAlgorithm):
 
         p.add_argument(
             '--with_vtrace',
-            default=True,
+            default=False,
             type=str2bool,
             help='Enables V-trace off-policy correction. If this is True, then GAE is not used')
         p.add_argument(

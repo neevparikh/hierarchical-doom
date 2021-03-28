@@ -10,7 +10,7 @@ from algorithms.appo_common.model_utils import create_encoder, create_core, Acti
     ActionParameterizationDefault, ActionParameterizationOption, normalize_obs
 from algorithms.utils.action_distributions import sample_actions_log_probs, is_continuous_action_space, calc_num_actions, calc_num_logits
 from utils.timing import Timing
-from utils.utils import AttrDict
+from utils.utils import AttrDict, log
 
 
 class CPCA(nn.Module):
@@ -229,7 +229,6 @@ class _ActorCriticSharedWeights(_ActorCriticBase):
         values = self.critic_linear(core_output)
 
         action_distribution_params, action_distribution = self.action_parameterization(core_output)
-
         # for non-trivial action spaces it is faster to do these together
         actions, log_prob_actions = sample_actions_log_probs(action_distribution)
 
@@ -383,7 +382,7 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         x, new_rnn_states = self.core(head_output, rnn_states)
         return x, new_rnn_states
 
-    def forward_tail(self, core_output, with_action_distribution=False):
+    def forward_tail(self, core_output, with_option_idx=False, with_action_distribution=False):
 
         self.termination_prob = self.termination(core_output)
         self.termination_mask = torch.where(self.termination_prob > random(),
@@ -405,29 +404,34 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
                 values=values,
                 termination_prob=self.termination_prob,
                 termination_mask=self.termination_mask,
-                option_idx=self.current_option,
             ))
 
         if with_action_distribution:
             result.action_distribution = action_distribution
+
+        if with_option_idx:
+            result.option_idx = torch.tensor(self.current_option).unsqueeze(0).expand(
+                values.shape[0], -1)
 
         return result
 
     def forward(self, obs_dict, rnn_states, with_action_distribution=False, acting=False):
         x = self.forward_head(obs_dict)
         x, new_rnn_states = self.forward_core(x, rnn_states)
-        result = self.forward_tail(x, with_action_distribution=with_action_distribution)
-        if acting and self.termination_mask[self.current_option]:
+        result = self.forward_tail(x,
+                                   with_action_distribution=with_action_distribution,
+                                   with_option_idx=acting)
+        if acting and self.termination_mask[-1, self.current_option].item() == 1:
             self.select_new_option(result)
         result.rnn_states = new_rnn_states
         return result
 
     def select_new_option(self, result):
-        new_option = torch.argmax(result.values, 1)[-1]
+        new_option = torch.argmax(result.values, 1)[-1].item()
         if random() > self.option_epsilon:
             self.current_option = new_option
         else:
-            self.current_option = randint(0, self.cfg.num_options)
+            self.current_option = randint(0, self.cfg.num_options - 1)
 
 
 def create_actor_critic(cfg, obs_space, action_space, timing=None):

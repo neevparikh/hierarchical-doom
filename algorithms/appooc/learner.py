@@ -349,6 +349,15 @@ class LearnerWorker:
                                                                r.agent_idx,
                                                                r.traj_buffer_idx] = 1
 
+    def _index_values_in_buffer(self, buffer):
+        for rollout_idx in range(len(buffer.values)):
+            values, option_idx = buffer.values[rollout_idx], buffer.option_idx[rollout_idx]
+            buffer.values[rollout_idx] = self._index_via_option_idx_in_rollout(values, option_idx)
+
+    def _index_via_option_idx_in_rollout(self, tensor, option_idx):
+        assert tensor.shape[1] == self.cfg.num_options, "Must pass in B x num_options to index with option_idx"
+        return torch.gather(tensor, 1, option_idx.long())
+
     def _prepare_train_buffer(self, rollouts, macro_batch_size, timing):
         trajectories = [AttrDict(r['t']) for r in rollouts]
 
@@ -369,8 +378,7 @@ class LearnerWorker:
 
         if not self.cfg.with_vtrace:
             with timing.add_time('calc_gae'):
-                buffer.values = buffer.values[:, buffer.option_idx].squeeze(
-                )  # TODO: Check the indexing
+                self._index_values_in_buffer(buffer)
                 buffer = self._calculate_gae(buffer)
 
         with timing.add_time('batching'):
@@ -601,11 +609,12 @@ class LearnerWorker:
 
         return value_loss
 
-    def _termination_loss_func(self, values, terminations):
-        eps = self.cfg.options_epsilon
-        option_value = eps * values.mean(dim=1) + (1 - eps) * values.max(dim=1)
-        grad = values - option_value + self.cfg.deliberation_cost
-        term_loss = grad * terminations * self.cfg.termination_loss_coeff
+    def _termination_loss_func(self, indexed_values, values, terminations):
+        eps = self.cfg.option_epsilon
+        option_value = eps * values.mean(dim=1) + (1 - eps) * values.max(dim=1)[0]
+        grad = indexed_values - option_value + self.cfg.deliberation_cost
+        term_loss = grad * terminations
+        term_loss = term_loss.mean() * self.cfg.termination_loss_coeff
 
         return term_loss
 
@@ -737,8 +746,7 @@ class LearnerWorker:
 
                     # super large/small values can cause numerical problems and are probably noise anyway
                     ratio = torch.clamp(ratio, 0.05, 20.0)
-
-                    values = result.values[:, mb.option_idx].squeeze()  # TODO: Check the indexing
+                    values = self._index_via_option_idx_in_rollout(result.values, mb.option_idx)
 
                 with torch.no_grad(
                 ):  # these computations are not the part of the computation graph
@@ -793,8 +801,11 @@ class LearnerWorker:
                 with timing.add_time('losses'):
                     policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high)
                     exploration_loss = self.exploration_loss_func(action_distribution)
-                    termination_loss = self._termination_loss_func(
-                        values, result.values, result.termination_mask[:, mb.option_idx])
+                    indexed_termination = self._index_via_option_idx_in_rollout(
+                        result.termination_mask, mb.option_idx)
+                    termination_loss = self._termination_loss_func(values,
+                                                                   result.values,
+                                                                   indexed_termination)
                     actor_loss = policy_loss + exploration_loss + termination_loss
                     epoch_actor_losses.append(actor_loss.item())
 
