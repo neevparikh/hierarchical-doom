@@ -386,8 +386,8 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
 
         self.termination_prob = self.termination(core_output)
         self.termination_mask = torch.where(self.termination_prob > random(),
-                                            torch.ones(1),
-                                            torch.zeros(1))
+                                            torch.ones(1, device=self.termination_prob.device),
+                                            torch.zeros(1, device=self.termination_prob.device))
 
         values = self.critic_linear(core_output)
         action_distribution_params, action_distribution = self.action_parameterization(core_output, self.current_option)
