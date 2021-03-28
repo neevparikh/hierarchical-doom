@@ -75,6 +75,7 @@ class PolicyWorker:
         self.requests = []
 
         self.total_num_samples = 0
+        self.samples_per_step = 0
 
         self.process = TorchProcess(target=self._run, daemon=True)
 
@@ -107,6 +108,7 @@ class PolicyWorker:
                     observations[key] = torch.stack(x)
                 rnn_states = torch.stack(rnn_states)
                 num_samples = rnn_states.shape[0]
+                self.samples_per_step = num_samples
 
             with timing.add_time('obs_to_device'):
                 for key, x in observations.items():
@@ -297,6 +299,9 @@ class PolicyWorker:
                             samples=samples_since_last_report,
                             policy_id=self.policy_id,
                             stats=stats,
+                            policy_avg_stats={
+                                'options/avg_samples_per_step': self.samples_per_step
+                            },
                         ))
                     last_report = time.time()
                     last_report_samples = self.total_num_samples

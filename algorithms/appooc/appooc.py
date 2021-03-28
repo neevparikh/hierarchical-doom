@@ -765,6 +765,16 @@ class APPOOC(ReinforcementLearningAlgorithm):
                     for extra_stat_func in EXTRA_EPISODIC_STATS_PROCESSING:
                         extra_stat_func(policy_id, key, value, self.cfg)
 
+            if 'policy_avg_stats' in report:
+                s = report['policy_avg_stats']
+                for _, key, value in iterate_recursively(s):
+                    if key not in self.policy_avg_stats:
+                        self.policy_avg_stats[key] = [
+                            deque(maxlen=self.cfg.stats_avg) for _ in range(self.cfg.num_policies)
+                        ]
+
+                    self.policy_avg_stats[key][policy_id].append(value)
+
             if 'train' in report:
                 self.report_train_summaries(report['train'], policy_id)
 
@@ -897,7 +907,7 @@ class APPOOC(ReinforcementLearningAlgorithm):
                     writer.add_scalar(avg_tag, float(stat_value), env_steps)
 
                     # for key stats report min/max as well
-                    if key in ('reward', 'true_reward', 'len'):
+                    if key in ('reward', 'true_reward', 'len', 'avg_samples_per_step'):
                         writer.add_scalar(min_tag, float(min(stat[policy_id])), env_steps)
                         writer.add_scalar(max_tag, float(max(stat[policy_id])), env_steps)
 
