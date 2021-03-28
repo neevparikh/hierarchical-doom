@@ -905,6 +905,7 @@ class LearnerWorker:
         stats.entropy = var.action_distribution.entropy().mean()
         stats.policy_loss = var.policy_loss
         stats.value_loss = var.value_loss
+        stats.termination_loss = var.termination_loss
         stats.exploration_loss = var.exploration_loss
         if self.aux_loss_module is not None:
             stats.aux_loss = var.aux_loss
