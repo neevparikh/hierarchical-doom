@@ -434,12 +434,13 @@ class ActionParameterizationOption(ActionsParameterizationBase):
         self.distribution_linear = nn.Linear(core_out_size,
                                              self.num_action_outputs * cfg.num_options)
 
-    def forward(self, actor_core_output, option_idx):
-        """Just forward the FC layer and generate the distribution object."""
+    def forward(self, actor_core_output):
+        """Just forward the FC layer and generate the distribution object for all options"""
         action_distribution_params = self.distribution_linear(actor_core_output).view(
-            -1, self.num_action_outputs, self.num_options)[:, :, option_idx]
+            -1, self.num_action_outputs, self.num_options)
         action_distribution = get_action_distribution(self.action_space,
-                                                      raw_logits=action_distribution_params)
+                                                      raw_logits=action_distribution_params,
+                                                      num_options=self.num_options)
         return action_distribution_params, action_distribution
 
 

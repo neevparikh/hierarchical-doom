@@ -76,9 +76,9 @@ class SharedBuffers:
 
         # policy outputs
         policy_outputs = [
-            ('actions', num_actions),
-            ('action_logits', num_action_logits),
-            ('log_prob_actions', 1),
+            ('actions', num_actions * cfg.num_options),
+            ('action_logits', num_action_logits * cfg.num_options),
+            ('log_prob_actions', 1 * cfg.num_options),
             ('policy_version', 1),
             ('rnn_states', hidden_size),
             ('values', cfg.num_options),

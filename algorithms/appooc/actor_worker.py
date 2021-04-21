@@ -76,6 +76,7 @@ class ActorState:
         self.policy_output_tensors = policy_output_tensors
 
         self.last_actions = None
+        self.last_option_idx = None
         self.last_policy_steps = None
         self.last_rnn_state = None
 
@@ -159,9 +160,9 @@ class ActorState:
             actions = self.last_actions.type(torch.int32).numpy()
         else:
             actions = self.last_actions.numpy()
-
-        if len(actions) == 1:
-            actions = actions.item()
+        assert len(actions.shape) == 1, "policy worker returned more than one action per actor worker, ambiguous option index"
+        idx = self.last_option_idx.long().item()
+        actions = actions[idx].item()
         return actions
 
     def record_env_step(self, reward, done, info, traj_buffer_idx, rollout_step):
@@ -407,6 +408,7 @@ class VectorEnvRunner:
                                                     self.traj_buffer_idx,
                                                     self.rollout_step)
                     actor_state.last_actions = policy_outputs_dict['actions']
+                    actor_state.last_option_idx = policy_outputs_dict['option_idx']
 
                     # this is an rnn state for the next iteration in the rollout
                     actor_state.last_rnn_state = new_rnn_state
@@ -527,8 +529,11 @@ class VectorEnvRunner:
                 actor_state.ready = False
 
                 # populate policy inputs in shared memory
-                policy_inputs = dict(obs=actor_state.last_obs,
-                                     rnn_states=actor_state.last_rnn_state)
+                policy_inputs = dict(
+                    obs=actor_state.last_obs,
+                    rnn_states=actor_state.last_rnn_state,
+                    option_idx=actor_state.last_option_idx,
+                )
                 actor_state.set_trajectory_data(policy_inputs,
                                                 self.traj_buffer_idx,
                                                 self.rollout_step)
