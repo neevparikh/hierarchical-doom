@@ -92,6 +92,7 @@ class PolicyWorker:
             with timing.add_time('deserialize'):
                 observations = AttrDict()
                 rnn_states = []
+                option_idxs = []
 
                 traj_tensors = self.shared_buffers.tensors_individual_transitions
                 for request in self.requests:
@@ -101,12 +102,14 @@ class PolicyWorker:
                         index = actor_idx, split_idx, env_idx, agent_idx, traj_buffer_idx, rollout_step
                         dict_of_lists_append(observations, traj_tensors['obs'], index)
                         rnn_states.append(traj_tensors['rnn_states'][index])
+                        option_idxs.append(traj_tensors['option_idx'][index])
                         self.total_num_samples += 1
 
             with timing.add_time('stack'):
                 for key, x in observations.items():
                     observations[key] = torch.stack(x)
                 rnn_states = torch.stack(rnn_states)
+                option_idxs = torch.stack(option_idxs)
                 num_samples = rnn_states.shape[0]
                 self.samples_per_step = num_samples
 
@@ -115,9 +118,13 @@ class PolicyWorker:
                     device, dtype = self.actor_critic.device_and_type_for_input_tensor(key)
                     observations[key] = x.to(device).type(dtype)
                 rnn_states = rnn_states.to(self.device).float()
+                option_idxs = option_idxs.to(self.device).float()
 
             with timing.add_time('forward'):
-                policy_outputs = self.actor_critic(observations, rnn_states, acting=True)
+                policy_outputs = self.actor_critic(observations,
+                                                   rnn_states,
+                                                   option_idxs=option_idxs,
+                                                   acting=True)
 
             with timing.add_time('to_cpu'):
                 for key, output_value in policy_outputs.items():
@@ -132,6 +139,8 @@ class PolicyWorker:
                 for policy_output in self.shared_buffers.policy_outputs:
                     tensor_name = policy_output.name
                     output_value = policy_outputs[tensor_name].float()
+                    if tensor_name in ['actions', 'action_logits', 'log_prob_actions']:
+                        output_value = output_value.reshape(-1, policy_output.size)
                     if len(output_value.shape) == 1:
                         output_value.unsqueeze_(dim=1)
                     output_tensors.append(output_value)

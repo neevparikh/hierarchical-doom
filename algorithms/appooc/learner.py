@@ -28,6 +28,7 @@ from algorithms.appooc.population_based_training import PbtTask
 from algorithms.utils.action_distributions import get_action_distribution, is_continuous_action_space
 from algorithms.utils.algo_utils import calculate_gae, EPS
 from algorithms.utils.pytorch_utils import to_scalar
+from algorithms.utils.action_distributions import calc_num_logits, calc_num_actions
 from utils.decay import LinearDecay
 from utils.timing import Timing
 from utils.utils import log, AttrDict, experiment_dir, ensure_dir_exists, join_or_kill, safe_get, safe_put
@@ -216,6 +217,9 @@ class LearnerWorker:
         self.obs_space = obs_space
         self.action_space = action_space
 
+        self.num_actions = calc_num_actions(action_space)
+        self.num_action_logits = calc_num_logits(action_space)
+
         self.rollout_tensors = shared_buffers.tensor_trajectories
         self.traj_tensors_available = shared_buffers.is_traj_tensor_available
         self.policy_versions = shared_buffers.policy_versions
@@ -278,7 +282,7 @@ class LearnerWorker:
                                       'continuous action spaces. Use entropy exploration loss')
 
         if self.cfg.exploration_loss_coeff == 0.0:
-            self.exploration_loss_func = lambda action_distr: 0.0
+            self.exploration_loss_func = lambda action_distr, option_idx: 0.0
         elif self.cfg.exploration_loss == 'entropy':
             self.exploration_loss_func = self.entropy_exploration_loss
         elif self.cfg.exploration_loss == 'symmetric_kl':
@@ -356,7 +360,10 @@ class LearnerWorker:
 
     def _index_via_option_idx_in_rollout(self, tensor, option_idx):
         assert tensor.shape[1] == self.cfg.num_options, "Must pass in B x num_options to index with option_idx"
-        return torch.gather(tensor, 1, option_idx.long())
+        assert tensor.shape[0] == option_idx.shape[0], "Must have same B (batch) dim"
+        idx = option_idx.reshape(option_idx.shape + (1,) * len(tensor.shape[2:]))
+        idx = idx.expand((tensor.shape[0], -1) + tensor.shape[2:]).long()
+        return torch.gather(tensor, 1, idx).squeeze()
 
     def _prepare_train_buffer(self, rollouts, macro_batch_size, timing):
         trajectories = [AttrDict(r['t']) for r in rollouts]
@@ -437,7 +444,7 @@ class LearnerWorker:
                 # we wait here until this is over so we can continue queueing more batches onto a GPU without having
                 # a risk to run out of GPU memory
                 while self.num_batches_processed < 1:
-                    log.debug('Waiting for the first batch to be processed')
+                    # log.debug('Waiting for the first batch to be processed')
                     time.sleep(0.5)
 
     def _process_rollouts(self, rollouts, timing):
@@ -618,13 +625,16 @@ class LearnerWorker:
 
         return term_loss
 
-    def entropy_exploration_loss(self, action_distribution):
-        entropy = action_distribution.entropy()
+    def entropy_exploration_loss(self, action_distribution, option_idx):
+        entropy = action_distribution.entropy().reshape(-1, self.cfg.num_options)
+        entropy = self._index_via_option_idx_in_rollout(entropy, option_idx)
         entropy_loss = -self.cfg.exploration_loss_coeff * entropy.mean()
         return entropy_loss
 
-    def symmetric_kl_exploration_loss(self, action_distribution):
-        kl_prior = action_distribution.symmetric_kl_with_uniform_prior()
+    def symmetric_kl_exploration_loss(self, action_distribution, option_idx):
+        kl_prior = action_distribution.symmetric_kl_with_uniform_prior().reshape(
+            -1, self.cfg.num_options)
+        kl_prior = self._index_via_option_idx_in_rollout(kl_prior, option_idx)
         kl_prior = kl_prior.mean()
         if not torch.isfinite(kl_prior):
             kl_prior = torch.zeros(kl_prior.shape)
@@ -738,10 +748,16 @@ class LearnerWorker:
 
                     # calculate policy tail outside of recurrent loop
                     result = self.actor_critic.forward_tail(core_outputs,
+                                                            mb.option_idx,
                                                             with_action_distribution=True)
 
                     action_distribution = result.action_distribution
-                    log_prob_actions = action_distribution.log_prob(mb.actions)
+                    log_prob_actions = action_distribution.log_prob(mb.actions).reshape(
+                        -1, self.cfg.num_options)
+                    log_prob_actions = self._index_via_option_idx_in_rollout(
+                        log_prob_actions, mb.option_idx)
+                    mb.log_prob_actions = self._index_via_option_idx_in_rollout(
+                        mb.log_prob_actions, mb.option_idx)
                     ratio = torch.exp(log_prob_actions - mb.log_prob_actions)  # pi / pi_old
 
                     # super large/small values can cause numerical problems and are probably noise anyway
@@ -800,7 +816,8 @@ class LearnerWorker:
 
                 with timing.add_time('losses'):
                     policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high)
-                    exploration_loss = self.exploration_loss_func(action_distribution)
+                    exploration_loss = self.exploration_loss_func(action_distribution,
+                                                                  mb.option_idx)
                     indexed_termination = self._index_via_option_idx_in_rollout(
                         result.termination_mask, mb.option_idx)
                     termination_loss = self._termination_loss_func(values,
@@ -912,7 +929,13 @@ class LearnerWorker:
         stats.adv_min = var.adv.min()
         stats.adv_max = var.adv.max()
         stats.adv_std = var.adv_std
-        stats.max_abs_logprob = torch.abs(var.mb.action_logits).max()
+        reshaped_action_logits = var.mb.action_logits.reshape(-1,
+                                                              self.num_action_logits,
+                                                              self.cfg.num_options).permute(
+                                                                  0, 2, 1)
+        indexed_action_logits = self._index_via_option_idx_in_rollout(reshaped_action_logits,
+                                                                      var.mb.option_idx).squeeze()
+        stats.max_abs_logprob = torch.abs(indexed_action_logits).max()
 
         if hasattr(var.action_distribution, 'summaries'):
             stats.update(var.action_distribution.summaries())
@@ -928,10 +951,10 @@ class LearnerWorker:
             value_delta_avg, value_delta_max = value_delta.mean(), value_delta.max()
 
             # calculate KL-divergence with the behaviour policy action distribution
-            old_action_distribution = get_action_distribution(
-                self.actor_critic.action_space,
-                var.mb.action_logits,
-            )
+            old_action_distribution = get_action_distribution(self.actor_critic.action_space,
+                                                              reshaped_action_logits.permute(
+                                                                  0, 2, 1),
+                                                              num_options=self.cfg.num_options)
             kl_old = var.action_distribution.kl_divergence(old_action_distribution)
             kl_old_mean = kl_old.mean()
 
