@@ -89,6 +89,7 @@ class SharedBuffers:
 
         policy_outputs = [PolicyOutput(*po) for po in policy_outputs]
         policy_outputs = sorted(policy_outputs, key=lambda policy_output: policy_output.name)
+        self.policy_outputs = policy_outputs
 
         for po in policy_outputs:
             self.tensors[po.name] = self.init_tensor(torch.float32, [po.size])
