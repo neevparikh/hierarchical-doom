@@ -405,8 +405,7 @@ class LearnerWorker:
         with timing.add_time('squeeze'):
             # will squeeze actions only in simple categorical case
             tensors_to_squeeze = [
-                'actions',
-                'log_prob_actions',
+                'actions',  # 'log_prob_actions',
                 'policy_version',
                 'rewards',
                 'dones',
