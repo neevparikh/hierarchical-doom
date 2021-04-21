@@ -100,13 +100,13 @@ class CategoricalOptionDistribution:
     @property
     def probs(self):
         if self.p is None:
-            self.p = F.softmax(self.raw_logits, dim=-1).reshape(-1, self.num_actions)
+            self.p = F.softmax(self.raw_logits, dim=-2).reshape(-1, self.num_actions)
         return self.p
 
     @property
     def log_probs(self):
         if self.log_p is None:
-            self.log_p = F.log_softmax(self.raw_logits, dim=-1).reshape(-1, self.num_actions)
+            self.log_p = F.log_softmax(self.raw_logits, dim=-2).reshape(-1, self.num_actions)
         return self.log_p
 
     def sample_gumbel(self):
