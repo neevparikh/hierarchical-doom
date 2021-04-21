@@ -225,6 +225,8 @@ class LearnerWorker:
         self.policy_versions = shared_buffers.policy_versions
         self.stop_experience_collection = shared_buffers.stop_experience_collection
         self.shared_buffers = shared_buffers
+        self.actions_size = list(
+            filter(lambda po: po.name == 'actions', self.shared_buffers.policy_outputs))[0].size
 
         self.stop_experience_collection_num_msgs = self.resume_experience_collection_num_msgs = 0
 
@@ -752,11 +754,9 @@ class LearnerWorker:
                                                             with_action_distribution=True)
 
                     action_distribution = result.action_distribution
-                    actions_size = list(
-                        filter(lambda po: po.name == 'actions',
-                               self.shared_buffers.policy_outputs))[0].size
                     log_prob_actions = action_distribution.log_prob(
-                        mb.actions.reshape(-1, actions_size)).reshape(-1, self.cfg.num_options)
+                        mb.actions.reshape(-1,
+                                           self.actions_size)).reshape(-1, self.cfg.num_options)
                     log_prob_actions = self._index_via_option_idx_in_rollout(
                         log_prob_actions, mb.option_idx)
                     mb.log_prob_actions = self._index_via_option_idx_in_rollout(
