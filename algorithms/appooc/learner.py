@@ -225,9 +225,6 @@ class LearnerWorker:
         self.policy_versions = shared_buffers.policy_versions
         self.stop_experience_collection = shared_buffers.stop_experience_collection
         self.shared_buffers = shared_buffers
-        self.actions_size = list(
-            filter(lambda po: po.name == 'actions', self.shared_buffers.policy_outputs))[0].size
-
         self.stop_experience_collection_num_msgs = self.resume_experience_collection_num_msgs = 0
 
         self.device = None
@@ -364,9 +361,12 @@ class LearnerWorker:
     def _index_via_option_idx_in_rollout(self, tensor, option_idx):
         assert tensor.shape[1] == self.cfg.num_options, "Must pass in B x num_options to index with option_idx"
         assert tensor.shape[0] == option_idx.shape[0], "Must have same B (batch) dim"
+        assert option_idx.shape[1] == 1
+        assert len(option_idx.shape) == 2
         idx = option_idx.reshape(option_idx.shape + (1,) * len(tensor.shape[2:]))
-        idx = idx.expand((tensor.shape[0], -1) + tensor.shape[2:]).long()
-        return torch.gather(tensor, 1, idx).squeeze()
+        idx = idx.expand((tensor.shape[0], -1) +
+                         tensor.shape[2:]).long()  # B x 1 x <E> where shape of tensor (B x O x <E>)
+        return torch.gather(tensor, 1, idx).squeeze()  # B x 1 x <E>
 
     def _prepare_train_buffer(self, rollouts, macro_batch_size, timing):
         trajectories = [AttrDict(r['t']) for r in rollouts]
@@ -628,15 +628,18 @@ class LearnerWorker:
         return term_loss
 
     def entropy_exploration_loss(self, action_distribution, option_idx):
-        entropy = action_distribution.entropy().reshape(-1, self.cfg.num_options)
-        entropy = self._index_via_option_idx_in_rollout(entropy, option_idx)
+        entropy = action_distribution.entropy().reshape(
+            -1, self.cfg.num_options)  # (B * O) x 1 -> B x O
+        entropy = self._index_via_option_idx_in_rollout(entropy,
+                                                        option_idx)  # B x O and B x 1 -> B x 1
         entropy_loss = -self.cfg.exploration_loss_coeff * entropy.mean()
         return entropy_loss
 
     def symmetric_kl_exploration_loss(self, action_distribution, option_idx):
         kl_prior = action_distribution.symmetric_kl_with_uniform_prior().reshape(
-            -1, self.cfg.num_options)
-        kl_prior = self._index_via_option_idx_in_rollout(kl_prior, option_idx)
+            -1, self.cfg.num_options)  # (B * O) x 1 -> B x O
+        kl_prior = self._index_via_option_idx_in_rollout(kl_prior,
+                                                         option_idx)  # B x O and B x 1 -> B x 1
         kl_prior = kl_prior.mean()
         if not torch.isfinite(kl_prior):
             kl_prior = torch.zeros(kl_prior.shape)
@@ -750,17 +753,18 @@ class LearnerWorker:
 
                     # calculate policy tail outside of recurrent loop
                     result = self.actor_critic.forward_tail(core_outputs,
-                                                            mb.option_idx,
                                                             with_action_distribution=True)
 
                     action_distribution = result.action_distribution
                     log_prob_actions = action_distribution.log_prob(
-                        mb.actions.reshape(-1,
-                                           self.actions_size)).reshape(-1, self.cfg.num_options)
+                        mb.actions.reshape(
+                            -1,  # B x (num_actions * O) -> (B * O) x num_actions
+                            self.num_actions)).reshape(-1,
+                                                       self.cfg.num_options)  # (B * O) x 1 -> B x O
                     log_prob_actions = self._index_via_option_idx_in_rollout(
-                        log_prob_actions, mb.option_idx)
+                        log_prob_actions, mb.option_idx)  # B x O, B x 1 -> B x 1
                     mb.log_prob_actions = self._index_via_option_idx_in_rollout(
-                        mb.log_prob_actions, mb.option_idx)
+                        mb.log_prob_actions, mb.option_idx)  # B x O , B x 1 -> B x 1
                     ratio = torch.exp(log_prob_actions - mb.log_prob_actions)  # pi / pi_old
 
                     # super large/small values can cause numerical problems and are probably noise anyway

@@ -65,8 +65,10 @@ def get_action_distribution(action_space, raw_logits, num_options=None):
 
         if isinstance(action_space, gym.spaces.Discrete):
             return CategoricalOptionDistribution(raw_logits, num_options)
-        # elif isinstance(action_space, gym.spaces.Tuple):
-        #     return TupleActionDistribution(action_space, logits_flat=raw_logits)
+        elif isinstance(action_space, gym.spaces.Tuple):
+            return TupleOptionDistribution(action_space,
+                                           logits_flat=raw_logits,
+                                           num_options=num_options)
         # elif isinstance(action_space, gym.spaces.Box):
         #     return ContinuousActionDistribution(params=raw_logits)
         else:
@@ -100,13 +102,17 @@ class CategoricalOptionDistribution:
     @property
     def probs(self):
         if self.p is None:
-            self.p = F.softmax(self.raw_logits, dim=-2).reshape(-1, self.num_actions)
+            # B x A x O -> B x O x A -> (B * O) x A
+            self.p = F.softmax(self.raw_logits, dim=-2).permute(0, 2,
+                                                                1).reshape(-1, self.num_actions)
         return self.p
 
     @property
     def log_probs(self):
         if self.log_p is None:
-            self.log_p = F.log_softmax(self.raw_logits, dim=-2).reshape(-1, self.num_actions)
+            # B x A x O -> B x O x A -> (B * O) x A
+            self.log_p = F.log_softmax(self.raw_logits,
+                                       dim=-2).permute(0, 2, 1).reshape(-1, self.num_actions)
         return self.log_p
 
     def sample_gumbel(self):
@@ -116,14 +122,15 @@ class CategoricalOptionDistribution:
         raise NotImplementedError
 
     def sample(self):
-        samples = torch.multinomial(self.probs, 1, True).squeeze(dim=-1)
+        samples = torch.multinomial(self.probs, 1, True).squeeze(dim=-1)  # (B * O) x 1
         return samples
 
     def log_prob(self, value):
-        value = value.long()
+        value = value.long()  # actions generally (B * O)
+        assert self.log_probs.shape[0] == value.shape[0]  # assert it is (B * O)
         if len(value.shape) == 1:
             value = value.unsqueeze(-1)
-        log_probs = torch.gather(self.log_probs, -1, value).view(-1)
+        log_probs = torch.gather(self.log_probs, -1, value).view(-1)  # (B * O) x 1
         return log_probs
 
     def entropy(self):
@@ -172,94 +179,103 @@ class CategoricalOptionDistribution:
         log.debug(msg)
 
 
-# class TupleActionDistribution:
-#     """
-#     Basically, a tuple of independent action distributions.
-#     Useful when the environment requires multiple independent action heads, e.g.:
-#      - moving in the environment
-#      - selecting a weapon
-#      - jumping
-#      - strafing
+class TupleOptionDistribution:
+    """
+    Basically, a tuple of independent action distributions.
+    Useful when the environment requires multiple independent action heads, e.g.:
+     - moving in the environment
+     - selecting a weapon
+     - jumping
+     - strafing
 
-#     Empirically, it seems to be better to represent such an action distribution as a tuple of independent action
-#     distributions, rather than a one-hot over potentially big cartesian product of all action spaces, like it's
-#     usually done in Atari.
+    Empirically, it seems to be better to represent such an action distribution as a tuple of independent action
+    distributions, rather than a one-hot over potentially big cartesian product of all action spaces, like it's
+    usually done in Atari.
 
-#     Entropy of such a distribution is just a sum of entropies of individual distributions.
+    Entropy of such a distribution is just a sum of entropies of individual distributions.
 
-#     """
-#     def __init__(self, action_space, logits_flat):
-#         self.logit_lengths = [calc_num_logits(s) for s in action_space.spaces]
-#         self.split_logits = torch.split(logits_flat, self.logit_lengths, dim=1)
-#         assert len(self.split_logits) == len(action_space.spaces)
+    """
+    def __init__(self, action_space, logits_flat, num_options):
+        self.action_space = action_space
+        self.logit_lengths = [calc_num_logits(s) for s in action_space.spaces]
+        self.split_logits = torch.split(logits_flat, self.logit_lengths, dim=1)
+        assert len(self.split_logits) == len(action_space.spaces)
+        self.num_options = num_options
 
-#         self.distributions = []
-#         for i, space in enumerate(action_space.spaces):
-#             self.distributions.append(get_action_distribution(space, self.split_logits[i]))
+        self.distributions = []
+        for i, space in enumerate(action_space.spaces):
+            self.distributions.append(
+                get_action_distribution(space, self.split_logits[i], num_options=num_options))
 
-#     @staticmethod
-#     def _flatten_actions(list_of_action_batches):
-#         batch_of_action_tuples = torch.stack(list_of_action_batches).transpose(0, 1)
-#         return batch_of_action_tuples
+        self.num_actions = sum([d.num_actions for d in self.distributions])  # num_act = D
 
-#     def _calc_log_probs(self, list_of_action_batches):
-#         # calculate batched log probs for every distribution
-#         log_probs = [d.log_prob(a) for d, a in zip(self.distributions, list_of_action_batches)]
-#         log_probs = [lp.unsqueeze(dim=1) for lp in log_probs]
+    @staticmethod
+    def _flatten_actions(list_of_action_batches):
+        batch_of_action_tuples = torch.stack(list_of_action_batches).transpose(0, 1)
+        return batch_of_action_tuples
 
-#         # concatenate and calculate sum of individual log-probs
-#         # this is valid under the assumption that action distributions are independent
-#         log_probs = torch.cat(log_probs, dim=1)
-#         log_probs = log_probs.sum(dim=1)
+    def _calc_log_probs(self, list_of_action_batches):
+        # calculate batched log probs for every distribution
+        log_probs = [d.log_prob(a) for d, a in zip(self.distributions, list_of_action_batches)
+                    ]  # [(B * O) x 1] * D
+        log_probs = [lp.unsqueeze(dim=1) for lp in log_probs]  # [(B * O) x 1 x 1] * D
 
-#         return log_probs
+        # concatenate and calculate sum of individual log-probs
+        # this is valid under the assumption that action distributions are independent
+        log_probs = torch.cat(log_probs, dim=1)  # (B * O) x D x 1
+        log_probs = log_probs.sum(dim=1)  # (B * O) x 1
 
-#     def sample_actions_log_probs(self):
-#         list_of_action_batches = [d.sample() for d in self.distributions]
-#         batch_of_action_tuples = self._flatten_actions(list_of_action_batches)
-#         log_probs = self._calc_log_probs(list_of_action_batches)
-#         return batch_of_action_tuples, log_probs
+        return log_probs
 
-#     def sample(self):
-#         list_of_action_batches = [d.sample() for d in self.distributions]
-#         return self._flatten_actions(list_of_action_batches)
+    def sample_actions_log_probs(self):
+        list_of_action_batches = [d.sample().squeeze(-1) for d in self.distributions
+                                 ]  # [(B * O) x 1] * D
+        batch_of_action_tuples = self._flatten_actions(list_of_action_batches).squeeze(
+            -1)  # (B * O) x D
+        log_probs = self._calc_log_probs(list_of_action_batches)  # (B * O) x 1
+        return batch_of_action_tuples, log_probs  # (B * O) x D, (B * O) x 1
 
-#     def log_prob(self, actions):
-#         # split into batches of actions from individual distributions
-#         list_of_action_batches = torch.chunk(actions, len(self.distributions), dim=1)
-#         list_of_action_batches = [a.squeeze(dim=1) for a in list_of_action_batches]
+    def sample(self):
+        list_of_action_batches = [d.sample() for d in self.distributions]
+        return self._flatten_actions(list_of_action_batches)
 
-#         log_probs = self._calc_log_probs(list_of_action_batches)
-#         return log_probs
+    def log_prob(self, actions):
+        # split into batches of actions from individual distributions
+        list_of_action_batches = torch.chunk(actions, len(self.distributions), dim=1)
+        list_of_action_batches = [a.squeeze(dim=1) for a in list_of_action_batches]
 
-#     def entropy(self):
-#         entropies = [d.entropy().unsqueeze(dim=1) for d in self.distributions]
-#         entropies = torch.cat(entropies, dim=1)
-#         entropy = entropies.sum(dim=1)
-#         return entropy
+        log_probs = self._calc_log_probs(list_of_action_batches)
+        return log_probs
 
-#     def kl_divergence(self, other):
-#         kls = [
-#             d.kl_divergence(other_d).unsqueeze(dim=1) for d,
-#             other_d in zip(self.distributions, other.distributions)
-#         ]
+    def entropy(self):
+        entropies = [d.entropy().unsqueeze(dim=1) for d in self.distributions]
+        entropies = torch.cat(entropies, dim=1)
+        entropy = entropies.sum(dim=1)
+        return entropy
 
-#         kls = torch.cat(kls, dim=1)
-#         kl = kls.sum(dim=1)
-#         return kl
+    def kl_divergence(self, other):
+        kls = [
+            d.kl_divergence(other_d).unsqueeze(dim=1) for d,
+            other_d in zip(self.distributions, other.distributions)
+        ]
 
-#     def symmetric_kl_with_uniform_prior(self):
-#         sym_kls = [d.symmetric_kl_with_uniform_prior().unsqueeze(dim=1) for d in self.distributions]
-#         sym_kls = torch.cat(sym_kls, dim=1)
-#         sym_kl = sym_kls.sum(dim=1)
-#         return sym_kl
+        kls = torch.cat(kls, dim=1)
+        kl = kls.sum(dim=1)
+        return kl
 
-#     def dbg_print(self):
-#         for d in self.distributions:
-#             d.dbg_print()
+    def symmetric_kl_with_uniform_prior(self):
+        sym_kls = [d.symmetric_kl_with_uniform_prior().unsqueeze(dim=1) for d in self.distributions]
+        sym_kls = torch.cat(sym_kls, dim=1)
+        sym_kl = sym_kls.sum(dim=1)
+        return sym_kl
+
+    def dbg_print(self):
+        for d in self.distributions:
+            d.dbg_print()
+
 
 # noinspection PyAbstractClass
-# class ContinuousActionDistribution(Independent):
+# class ContinuousOptionDistribution(Independent):
 #     stddev_min = 1e-5
 #     stddev_max = 1e5
 #     stddev_span = stddev_max - stddev_min

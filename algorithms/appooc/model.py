@@ -381,7 +381,7 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         x, new_rnn_states = self.core(head_output, rnn_states)
         return x, new_rnn_states
 
-    def forward_tail(self, core_output, option_idxs, with_action_distribution=False):
+    def forward_tail(self, core_output, with_action_distribution=False):
 
         self.termination_prob = self.termination(core_output)
         self.termination_mask = torch.where(
@@ -398,10 +398,11 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
         # perhaps `action_logits` is not the best name here since we now support continuous actions
         result = AttrDict(
             dict(
-                actions=actions,
+                actions=actions,  # (B * O) x (num_actions/D)
+                # B x num_action_logits x O -> (B * O) x num_action_logits
                 action_logits=action_distribution_params.reshape(-1,
                                                                  action_distribution.num_actions),
-                log_prob_actions=log_prob_actions,
+                log_prob_actions=log_prob_actions,  # (B * O) x 1
                 values=values,
                 termination_prob=self.termination_prob,
                 termination_mask=self.termination_mask,
@@ -415,14 +416,12 @@ class _OptionCriticSharedWeights(_ActorCriticBase):
     def forward(self,
                 obs_dict,
                 rnn_states,
-                option_idxs=None,
+                option_idxs,
                 with_action_distribution=False,
                 acting=False):
         x = self.forward_head(obs_dict)
         x, new_rnn_states = self.forward_core(x, rnn_states)
-        result = self.forward_tail(x,
-                                   option_idxs,
-                                   with_action_distribution=with_action_distribution)
+        result = self.forward_tail(x, with_action_distribution=with_action_distribution)
         if acting:
             new_option_idxs = self.select_new_option(result, option_idxs)
             result.option_idx = new_option_idxs

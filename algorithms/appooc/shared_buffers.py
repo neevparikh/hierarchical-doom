@@ -45,6 +45,9 @@ class PolicyOutput:
         self.name = name
         self.size = size
 
+    def __repr__(self):
+        return repr((self.name, self.size))
+
 
 class SharedBuffers:
     def __init__(self, cfg, num_agents, obs_space, action_space):
@@ -55,6 +58,8 @@ class SharedBuffers:
 
         num_actions = calc_num_actions(action_space)
         num_action_logits = calc_num_logits(action_space)
+        self.num_actions = num_actions
+        self.num_action_logits = num_action_logits
 
         hidden_size = get_hidden_size(self.cfg)
 

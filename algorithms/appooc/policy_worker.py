@@ -139,6 +139,17 @@ class PolicyWorker:
                 for policy_output in self.shared_buffers.policy_outputs:
                     tensor_name = policy_output.name
                     output_value = policy_outputs[tensor_name].float()
+                    # if tensor_name == 'actions':
+                    #     # actions: (B * O) x num_actions -> B x (num_actions * O)
+                    #     num_actions = self.shared_buffers.num_actions
+                    #     output_value = output_value.reshape(-1, self.cfg.num_options, num_actions)
+                    # elif tensor_name == 'action_logits':
+                    #     num_action_logits = self.shared_buffers.num_action_logits
+                    #     # action_logits: (B * O) x num_action_logits -> B x (num_action_logits * O)
+                    #     output_value = output_value.reshape(-1, self.cfg.num_options, num_action_logits)
+                    # elif tensor_name == 'log_prob_actions':
+                    #     # log_prob_actions: (B * O) x 1 -> B x (1 * O)
+                    #     output_value = output_value.reshape(-1, self.cfg.num_options, 1)
                     if tensor_name in ['actions', 'action_logits', 'log_prob_actions']:
                         output_value = output_value.reshape(-1, policy_output.size)
                     if len(output_value.shape) == 1:

@@ -162,7 +162,9 @@ class ActorState:
             actions = self.last_actions.numpy()
         assert len(actions.shape) == 1, "policy worker returned more than one action per actor worker, ambiguous option index"
         idx = self.last_option_idx.long().item()
-        actions = actions[idx].item()
+        actions = actions.reshape(self.cfg.num_options, -1)[idx, ...]  # (O * A) -> O x A -> A
+        if len(actions) == 1:
+            actions = actions.item()
         return actions
 
     def record_env_step(self, reward, done, info, traj_buffer_idx, rollout_step):
