@@ -8,6 +8,7 @@ faster-fifo==1.0.7
 filelock==3.0.12
 future==0.18.2
 gast==0.2.2
+git+https://github.com/alex-petrenko/ViZDoom@doom_bot_project#egg=vizdoom 
 google-pasta==0.2.0
 GPUtil==1.4.0
 greenlet==1.0.0
@@ -31,7 +32,6 @@ pyglet==1.5.0
 pynvim==0.4.3
 python-dateutil==2.8.1
 pytz==2019.3
--e git+git@github.com:neevparikh/hierarchical-doom.git@e0f6c099d1cfc33186a5c9fd223844a0dcd51ef4#egg=sample_factory
 scipy==1.4.1
 six==1.15.0
 tensorboard==1.15.0
@@ -40,7 +40,6 @@ termcolor==1.1.0
 threadpoolctl==2.0.0
 torch==1.8.0
 typing-extensions==3.7.4.3
-vizdoom==1.1.8
 Werkzeug==1.0.0
 wrapt==1.12.1
 yapf==0.31.0
